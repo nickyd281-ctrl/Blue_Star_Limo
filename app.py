@@ -1,7 +1,9 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 import sqlite3
 
 app = Flask(__name__)
+CORS(app)  # ✅ This fixes your issue
 
 
 # Home route (API landing page)
@@ -42,7 +44,6 @@ def get_trips():
             "destination": row[5],
             "price": row[6]
         }
-
         trips.append(trip)
 
     return jsonify(trips)

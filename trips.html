@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Trips</title>
+</head>
+
+<body>
+
+<h1>All Trips</h1>
+
+<button onclick="loadTrips()">Load Trips</button>
+
+<div id="trips"></div>
+
+<script>
+function loadTrips() {
+  fetch("http://127.0.0.1:5001/api/trips")
+    .then(res => res.json())
+    .then(data => {
+
+      let output = `
+        <table border="1">
+          <tr>
+            <th>Name</th>
+            <th>Destination</th>
+            <th>Date</th>
+            <th>Price</th>
+          </tr>
+      `;
+
+      data.forEach(trip => {
+        output += `
+          <tr>
+            <td>${trip.first_name} ${trip.last_name}</td>
+            <td>${trip.destination}</td>
+            <td>${trip.date}</td>
+            <td>${trip.price}</td>
+          </tr>
+        `;
+      });
+
+      output += "</table>";
+
+      document.getElementById("trips").innerHTML = output;
+    });
+}
+</script>
+
+</body>
+</html>

@@ -4,62 +4,140 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/styles.css">
-  <title>Book a Ride - Blue Star Limo</title>
+  <link rel="stylesheet" href="css/contact.css">
+  <title>Book a Ride — Blue Star Limo</title>
 </head>
-
 <body>
 
-  <!-- Navigation Bar -->
-  <div class="nav">
-    <a class="navitem" href="index.html">Home</a>
-    <a class="navitem" href="team.html">Our Team</a>
-    <a class="navitem" href="services.html">Services</a>
-    <a class="navitem" href="contact.html">Book with Us!</a>
-  </div>
+  <nav class="nav">
+    <span class="nav-brand">Blue Star Limo</span>
+    <div class="nav-links">
+      <a class="navitem" href="index.html">Home</a>
+      <a class="navitem" href="team.html">Our Team</a>
+      <a class="navitem" href="services.html">Services</a>
+      <a class="navitem active" href="contact.html">Book a Ride</a>
+    </div>
+  </nav>
 
-  <!-- Main Content -->
-  <main>
+  <!-- Page Header -->
+  <header class="contact-hero">
+    <div class="contact-hero-bg"></div>
+    <div class="contact-hero-content">
+      <p class="section-label">Reservations</p>
+      <h1 class="page-title">Reserve Your<br><em>Luxury Ride</em></h1>
+      <div class="gold-line"></div>
+      <p class="page-sub">Fill in your details below and we'll confirm your booking shortly.</p>
+    </div>
+  </header>
 
-    <h1>Book Your Ride</h1>
+  <!-- Contact Layout -->
+  <main class="contact-main">
 
-    <p class="intro">
-      Experience luxury and comfort like never before. Book your limo trip with us today and travel in style!
-      Fill out the booking form below and we will confirm your reservation shortly.
-    </p>
+    <!-- Left Info Column -->
+    <aside class="contact-info">
+      <div class="info-block">
+        <p class="section-label">Get in Touch</p>
+        <h2 class="info-title">We're Here<br>for You</h2>
+        <div class="gold-line" style="margin: 0 0 28px;"></div>
+        <p class="info-text">Our team is available around the clock to ensure your experience is seamless from the moment you book to the moment you arrive.</p>
+      </div>
+
+      <div class="contact-details">
+        <div class="contact-detail-item">
+          <div class="detail-icon">✉</div>
+          <div>
+            <div class="detail-label">Email</div>
+            <a href="/cdn-cgi/l/email-protection#177b7e7a78757b6272646376652657707a767e7b3974787a" class="detail-value"><span class="__cf_email__" data-cfemail="0b6762666469677e6e787f6a793a4b6c666a626725686466">[email&#160;protected]</span></a>
+          </div>
+        </div>
+        <div class="contact-detail-item">
+          <div class="detail-icon">🕐</div>
+          <div>
+            <div class="detail-label">Availability</div>
+            <div class="detail-value">24 hours, 7 days a week</div>
+          </div>
+        </div>
+        <div class="contact-detail-item">
+          <div class="detail-icon">✈</div>
+          <div>
+            <div class="detail-label">Airport Service</div>
+            <div class="detail-value">JFK · LGA · HVN & more</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-quote">
+        <p>"Every journey deserves to begin in luxury."</p>
+      </div>
+    </aside>
 
     <!-- Booking Form -->
-    <form action="http://localhost:5001/api/book" method="POST" class="contact-form">
+    <div class="form-panel">
+      <form action="http://127.0.0.1:5001/api/book" method="POST" class="booking-form">
 
-      <label>First Name:</label>
-      <input type="text" name="first_name" placeholder="Enter your first name" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="first_name">First Name</label>
+            <input type="text" id="first_name" name="first_name" placeholder="John" required>
+          </div>
+          <div class="form-group">
+            <label for="last_name">Last Name</label>
+            <input type="text" id="last_name" name="last_name" placeholder="Smith" required>
+          </div>
+        </div>
 
-      <label>Last Name:</label>
-      <input type="text" name="last_name" placeholder="Enter your last name" required>
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" name="phone" placeholder="+1 (555) 000-0000" required>
+        </div>
 
-      <label>Phone Number:</label>
-      <input type="text" name="phone" placeholder="Enter your phone number" required>
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="john@email.com">
+        </div>
 
-      <label>Trip Date:</label>
-      <input type="text" name="date" placeholder="MM/DD/YYYY" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="date">Trip Date</label>
+            <input type="date" id="date" name="date" required>
+          </div>
+          <div class="form-group">
+            <label for="time">Pickup Time</label>
+            <input type="time" id="time" name="time">
+          </div>
+        </div>
 
-      <label>Destination:</label>
-      <input type="text" name="destination" placeholder="Example: JFK, LGA, HVN" required>
+        <div class="form-group">
+          <label for="destination">Destination / Airport</label>
+          <input type="text" id="destination" name="destination" placeholder="e.g. JFK, LGA, HVN, or full address" required>
+        </div>
 
-      <button type="submit">Book Trip</button>
+        <div class="form-group">
+          <label for="vehicle">Preferred Vehicle</label>
+          <select id="vehicle" name="vehicle">
+            <option value="">No preference</option>
+            <option value="escalade">Cadillac Escalade</option>
+            <option value="xt6">Cadillac XT6</option>
+            <option value="suburban">Chevrolet Suburban</option>
+          </select>
+        </div>
 
-    </form>
+        <div class="form-group">
+          <label for="notes">Special Requests</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Any special requests or additional information..."></textarea>
+        </div>
+
+        <button type="submit" class="submit-btn">
+          <span>Confirm Reservation</span>
+          <span class="submit-arrow">→</span>
+        </button>
+
+      </form>
+    </div>
 
   </main>
 
-  <!-- Footer -->
   <footer>
-    <p>Contact us at 
-      <a href="mailto:limobluestar1@gmail.com">limobluestar1@gmail.com</a> 
-      for any inquiries!
-    </p>
-
-    <p>&copy; 2024 Blue Star Limo. All Rights Reserved.</p>
-  </footer>
-
-</body>
-</html>
+    <div class="footer-brand">Blue Star Limo</div>
+    <p>Connecticut's Premier Luxury Transportation</p>
+    <p style="margin-top:12px;"><a href="/cdn-cgi/l/email-protection#3d515450525
