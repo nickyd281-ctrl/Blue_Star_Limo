@@ -11,7 +11,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 60% 80% at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 50% 0%,  rgba(14,165,233,0.25) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 95% 50%,  rgba(2,132,199,0.18)  0%, transparent 55%),
     var(--dark);
 }
 
@@ -63,7 +64,7 @@
   font-family: 'Cormorant Garamond', serif;
   font-size: 100px;
   font-weight: 300;
-  color: rgba(201,168,76,0.06);
+  color: rgba(2,132,199,0.12);
   position: absolute;
   top: -10px;
   left: -20px;

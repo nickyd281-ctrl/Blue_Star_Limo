@@ -1,49 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@300;400;600;700&display=swap');
+
+/* ===== CSS VARIABLES ===== */
+:root {
+  /* Sky backgrounds */
+  --dark:       #e0f2fe;
+  --black:      #bae6fd;
+  --card:       #ffffff;
+  --border:     #7dd3fc;
+
+  /* Sky blue accent (replaces gold) */
+  --gold:       #0369a1;
+  --gold-dim:   rgba(3, 105, 161, 0.25);
+  --gold-light: #0ea5e9;
+
+  /* Brighter sky accents */
+  --blue:       #0284c7;
+  --blue-dim:   rgba(2, 132, 199, 0.15);
+  --blue-light: #38bdf8;
+
+  /* Text */
+  --white:      #0c2340;
+  --muted:      #475569;
+
+  --nav-h:      60px;
+}
+
 /* ===== BASE ===== */
 body {
   margin: 0;
-  padding-top: 80px; /* fixes navbar overlap */
-  background: #111;
-  color: white;
+  padding-top: 80px;
+  background: var(--dark);
+  color: var(--white);
   font-family: Arial, sans-serif;
 }
 
 /* ===== NAVBAR ===== */
 .nav {
-  background-color: #111;
-  height: 60px;
+  background-color: var(--black);
+  height: var(--nav-h);
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
+  justify-content: space-between;
+  padding: 0 40px;
   position: fixed;
   top: 0;
   width: 100%;
+  box-sizing: border-box;
   z-index: 1000;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
 }
 
 .navitem {
-  color: #c9a84c;
+  color: var(--blue-light);
   text-decoration: none;
-  font-weight: bold;
+  font-weight: 600;
   padding: 10px 15px;
-  transition: 0.3s;
+  transition: color 0.3s;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .navitem:hover {
-  color: white;
+  color: var(--gold);
 }
 
-/* ===== CONTAINER ===== */
+.navitem.active {
+  color: var(--gold);
+}
+
+/* ===== SHARED COMPONENTS ===== */
+.section-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin: 0 0 8px;
+}
+
+.gold-line {
+  width: 40px;
+  height: 1px;
+  background: linear-gradient(to right, var(--gold), var(--blue));
+  margin: 20px auto;
+}
+
+.btn-gold {
+  display: inline-block;
+  padding: 14px 36px;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-family: 'Montserrat', Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.3s, color 0.3s, border-color 0.3s;
+}
+
+.btn-gold:hover {
+  background: var(--gold);
+  color: var(--black);
+}
+
+.btn-gold-filled {
+  background: var(--gold);
+  color: var(--black) !important;
+}
+
+.btn-gold-filled:hover {
+  background: var(--gold-light);
+}
+
+/* ===== FOOTER ===== */
+footer {
+  background: var(--black);
+  border-top: 1px solid var(--border);
+  text-align: center;
+  padding: 48px 40px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.footer-brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 300;
+  color: var(--white);
+  letter-spacing: 3px;
+  margin-bottom: 10px;
+}
+
+footer a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+footer a:hover {
+  color: var(--gold-light);
+}
+
+/* ===== CONTAINER (index.html) ===== */
 .container {
   width: 960px;
   margin: auto;
 }
 
-/* ===== HEADER ===== */
 .logo {
   width: 100px;
   margin-right: 10px;
-  padding-left: 20px;
 }
 
 .title {
@@ -55,24 +178,21 @@ body {
 .subtext {
   text-align: center;
   font-size: 18px;
-  color: #c9a84c;
+  color: var(--blue-light);
 }
 
-/* ===== MAIN IMAGE ===== */
 .photo {
   width: 100%;
   height: auto;
   border-radius: 10px;
 }
 
-/* ===== SECTION TITLE ===== */
 .work {
   font-size: 40px;
   text-align: center;
-  color: #c9a84c;
+  color: var(--gold);
 }
 
-/* ===== COLUMNS ===== */
 .columns {
   display: flex;
   justify-content: space-around;
@@ -89,33 +209,32 @@ body {
   text-align: center;
   font-size: 22px;
   font-weight: bold;
-  color: white;
+  color: var(--blue-light);
 }
 
-/* ===== TEXT ===== */
 .info {
   font-size: 16px;
-  color: #ccc;
+  color: var(--muted);
   padding: 10px;
 }
 
-/* ===== FOOTER ===== */
 .copy {
   text-align: center;
   font-size: 16px;
   margin-top: 40px;
 }
 
-/* ===== FORM ===== */
+/* ===== FORM (generic) ===== */
 form {
   max-width: 500px;
   margin: 40px auto;
   display: flex;
   flex-direction: column;
   gap: 15px;
-  background: #222;
+  background: var(--card);
   padding: 25px;
-  border-radius: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
 }
 
 input, select {
@@ -123,37 +242,36 @@ input, select {
   font-size: 14px;
   border: none;
   outline: none;
+  background: var(--dark);
+  color: var(--white);
 }
 
 button {
-  background: #c9a84c;
+  background: var(--gold);
   border: none;
   padding: 12px;
   font-weight: bold;
   cursor: pointer;
   transition: 0.3s;
+  color: var(--black);
 }
 
 button:hover {
-  background: #e0c46c;
+  background: var(--gold-light);
 }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-  .container {
-    width: 95%;
-  }
+  .container { width: 95%; }
+  .columns { flex-direction: column; align-items: center; }
+  .colphotos { width: 100%; }
+  .title { font-size: 35px; }
+  .nav { padding: 0 20px; }
+  .nav-brand { font-size: 13px; letter-spacing: 1.5px; }
+  .navitem { padding: 8px 10px; font-size: 11px; }
+}
 
-  .columns {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .colphotos {
-    width: 100%;
-  }
-
-  .title {
-    font-size: 35px;
-  }
+@media (max-width: 480px) {
+  .nav-brand { display: none; }
+  .nav { justify-content: center; }
 }

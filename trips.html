@@ -1,49 +1,434 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Trips</title>
-</head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Blue Star Limo</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    body { text-align: center; }
 
+    /* ── Login ── */
+    #login {
+      max-width: 380px;
+      margin: 120px auto 0;
+      padding: 40px 36px;
+      background: #112032;
+      border: 1px solid #1e3352;
+    }
+    #login h2 {
+      color: #c9a84c;
+      font-size: 22px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin: 0 0 6px;
+    }
+    #login p {
+      color: #7a9ab8;
+      font-size: 12px;
+      margin: 0 0 28px;
+    }
+    #login input {
+      width: 100%;
+      padding: 13px 16px;
+      margin-bottom: 14px;
+      background: #0d1b2a;
+      border: 1px solid #1e3352;
+      color: #fff;
+      font-size: 14px;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    #login input:focus { border-color: #c9a84c; }
+    #login button {
+      width: 100%;
+      padding: 14px;
+      background: #c9a84c;
+      color: #000;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      transition: background 0.3s;
+    }
+    #login button:hover { background: #e0c46c; }
+    #login-error {
+      color: #e55;
+      font-size: 12px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; padding: 0 30px 60px; }
+
+    .dash-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1100px;
+      margin: 0 auto 32px;
+      padding-top: 10px;
+      border-bottom: 1px solid #1e3352;
+      padding-bottom: 20px;
+    }
+    .dash-header h1 {
+      font-size: 22px;
+      color: #c9a84c;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin: 0;
+    }
+    .logout-btn {
+      background: none;
+      border: 1px solid #1e3352;
+      color: #7a9ab8;
+      padding: 8px 18px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .logout-btn:hover { border-color: #7a9ab8; color: #fff; }
+
+    .dash-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      max-width: 1100px;
+      margin: 0 auto 28px;
+    }
+    .dash-controls select {
+      padding: 10px 16px;
+      background: #112032;
+      border: 1px solid #1e3352;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+    }
+    .dash-controls button {
+      padding: 10px 24px;
+      background: #c9a84c;
+      color: #000;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      transition: background 0.3s;
+    }
+    .dash-controls button:hover { background: #e0c46c; }
+
+    .trip-count {
+      text-align: left;
+      max-width: 1100px;
+      margin: 0 auto 12px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #3a5a7a;
+    }
+
+    /* ── Table ── */
+    .table-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead tr { background: #112032; }
+    th {
+      background: linear-gradient(135deg, #1a3a5c, #0f2a44);
+      color: #c9a84c;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 14px 16px;
+      white-space: nowrap;
+      border-bottom: 2px solid #c9a84c;
+    }
+    td {
+      padding: 13px 16px;
+      border-bottom: 1px solid #1a2f45;
+      color: #a8c0d6;
+      text-align: left;
+      white-space: nowrap;
+    }
+    tbody tr:hover { background: #112032; }
+    tbody tr:hover td { color: #fff; }
+    td.price { color: #c9a84c; font-weight: 600; }
+
+    .btn-invoice {
+      display: inline-block;
+      padding: 7px 14px;
+      background: none;
+      border: 1px solid #c9a84c;
+      color: #c9a84c;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-right: 6px;
+    }
+    .btn-invoice:hover { background: #c9a84c; color: #000; }
+
+    .btn-delete {
+      display: inline-block;
+      padding: 7px 14px;
+      background: none;
+      border: 1px solid #4a2222;
+      color: #cc4444;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-delete:hover { background: #cc4444; border-color: #cc4444; color: #fff; }
+
+    .no-trips {
+      color: #3a5a7a;
+      font-size: 14px;
+      padding: 48px 0;
+    }
+
+    .loading-msg {
+      color: #3a5a7a;
+      font-size: 13px;
+      padding: 40px 0;
+      letter-spacing: 1px;
+    }
+
+    /* ── Summary bar ── */
+    .summary-bar {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      max-width: 1100px;
+      margin: 0 auto 32px;
+      border: 1px solid #1e3352;
+      background: #112032;
+    }
+    .summary-item {
+      flex: 1;
+      padding: 20px;
+      border-right: 1px solid #1e3352;
+      text-align: center;
+    }
+    .summary-item:last-child { border-right: none; }
+    .summary-num {
+      font-size: 28px;
+      font-weight: 700;
+      color: #c9a84c;
+      line-height: 1;
+    }
+    .summary-lbl {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #5ba8d4;
+      margin-top: 6px;
+    }
+  </style>
+</head>
 <body>
 
-<h1>All Trips</h1>
+<!-- LOGIN PANEL -->
+<div id="login">
+  <h2>Admin</h2>
+  <p>Blue Star Limo Dashboard</p>
+  <input type="password" id="password" placeholder="Enter password" autocomplete="current-password">
+  <button onclick="checkLogin()">Sign In</button>
+  <div id="login-error">Incorrect password. Please try again.</div>
+</div>
 
-<button onclick="loadTrips()">Load Trips</button>
+<!-- DASHBOARD -->
+<div id="dashboard">
 
-<div id="trips"></div>
+  <div class="dash-header">
+    <h1>Admin Dashboard</h1>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-bar" id="summary-bar">
+    <div class="summary-item">
+      <div class="summary-num" id="sum-total">—</div>
+      <div class="summary-lbl">Total Trips</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-num" id="sum-jfk">—</div>
+      <div class="summary-lbl">JFK</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-num" id="sum-lga">—</div>
+      <div class="summary-lbl">LGA</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-num" id="sum-hvn">—</div>
+      <div class="summary-lbl">HVN</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-num" id="sum-revenue">—</div>
+      <div class="summary-lbl">Total Revenue</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="dash-controls">
+    <select id="filter" onchange="loadTrips()">
+      <option value="">All Trips</option>
+      <option value="JFK">JFK</option>
+      <option value="LGA">LGA</option>
+      <option value="HVN">HVN</option>
+    </select>
+    <button onclick="loadTrips()">Refresh</button>
+  </div>
+
+  <div class="trip-count" id="trip-count"></div>
+
+  <div class="table-wrap">
+    <div id="trips"><p class="loading-msg">Loading trips...</p></div>
+  </div>
+
+</div>
+
 
 <script>
-function loadTrips() {
-  fetch("http://127.0.0.1:5001/api/trips")
-    .then(res => res.json())
-    .then(data => {
+  // ── Auth ────────────────────────────────────────────────────
+  function checkLogin() {
+    const pw = document.getElementById("password").value;
+    if (pw === "NAD1218#n") {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      document.getElementById("login-error").style.display = "none";
+      loadTrips();
+      loadSummary();
+    } else {
+      document.getElementById("login-error").style.display = "block";
+      document.getElementById("password").value = "";
+    }
+  }
 
-      let output = `
-        <table border="1">
+  document.getElementById("password").addEventListener("keydown", e => {
+    if (e.key === "Enter") checkLogin();
+  });
+
+  function logout() {
+    document.getElementById("dashboard").style.display = "none";
+    document.getElementById("login").style.display = "block";
+    document.getElementById("password").value = "";
+  }
+
+  // ── Summary ─────────────────────────────────────────────────
+  function loadSummary() {
+    fetch("/api/trips")
+      .then(r => r.json())
+      .then(data => {
+        const jfk = data.filter(t => t.destination === "JFK").length;
+        const lga = data.filter(t => t.destination === "LGA").length;
+        const hvn = data.filter(t => t.destination === "HVN").length;
+        const rev = data.reduce((sum, t) => sum + (parseInt(t.price) || 0), 0);
+        document.getElementById("sum-total").textContent   = data.length;
+        document.getElementById("sum-jfk").textContent     = jfk;
+        document.getElementById("sum-lga").textContent     = lga;
+        document.getElementById("sum-hvn").textContent     = hvn;
+        document.getElementById("sum-revenue").textContent = "$" + rev.toLocaleString();
+      });
+  }
+
+  // ── Trips Table ──────────────────────────────────────────────
+  function loadTrips() {
+    const filter = document.getElementById("filter").value;
+    const url = filter ? `/api/trips/${filter}` : "/api/trips";
+
+    document.getElementById("trips").innerHTML = '<p class="loading-msg">Loading...</p>';
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => renderTable(data))
+      .catch(() => {
+        document.getElementById("trips").innerHTML =
+          '<p class="no-trips">Could not connect to server.</p>';
+      });
+  }
+
+  function renderTable(data) {
+    const countEl = document.getElementById("trip-count");
+    countEl.textContent = data.length
+      ? `Showing ${data.length} trip${data.length !== 1 ? "s" : ""}`
+      : "";
+
+    if (data.length === 0) {
+      document.getElementById("trips").innerHTML =
+        '<p class="no-trips">No trips found.</p>';
+      return;
+    }
+
+    let html = `
+      <table>
+        <thead>
           <tr>
+            <th>#</th>
             <th>Name</th>
+            <th>Phone</th>
+            <th>Email</th>
             <th>Destination</th>
             <th>Date</th>
             <th>Price</th>
+            <th>Actions</th>
           </tr>
+        </thead>
+        <tbody>
+    `;
+
+    data.forEach(trip => {
+      const price = "$" + (parseInt(trip.price) || 0).toLocaleString();
+      const email = trip.email || "—";
+      const phone = trip.phone || "—";
+      html += `
+        <tr>
+          <td>${trip.id}</td>
+          <td><strong style="color:#fff">${trip.first_name} ${trip.last_name}</strong></td>
+          <td>${phone}</td>
+          <td>${email}</td>
+          <td>${trip.destination}</td>
+          <td>${trip.date}</td>
+          <td class="price">${price}</td>
+          <td>
+            <a href="/api/invoice/${trip.id}" class="btn-invoice">Invoice PDF</a>
+            <button class="btn-delete" onclick="deleteTrip(${trip.id})">Delete</button>
+          </td>
+        </tr>
       `;
-
-      data.forEach(trip => {
-        output += `
-          <tr>
-            <td>${trip.first_name} ${trip.last_name}</td>
-            <td>${trip.destination}</td>
-            <td>${trip.date}</td>
-            <td>${trip.price}</td>
-          </tr>
-        `;
-      });
-
-      output += "</table>";
-
-      document.getElementById("trips").innerHTML = output;
     });
-}
+
+    html += "</tbody></table>";
+    document.getElementById("trips").innerHTML = html;
+  }
+
+  // ── Delete ───────────────────────────────────────────────────
+  function deleteTrip(id) {
+    if (!confirm("Delete this trip? This cannot be undone.")) return;
+    fetch(`/api/delete/${id}`, { method: "DELETE" })
+      .then(() => {
+        loadTrips();
+        loadSummary();
+      });
+  }
 </script>
 
 </body>

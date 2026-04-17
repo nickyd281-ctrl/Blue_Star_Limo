@@ -11,7 +11,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 50% 80% at 50% 0%, rgba(201,168,76,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 80% at 50% 0%,  rgba(14,165,233,0.25)  0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 100%, rgba(2,132,199,0.18)   0%, transparent 55%),
     var(--dark);
 }
 
@@ -187,7 +188,7 @@ a.detail-value:hover { color: var(--gold); }
 /* Date input text color fix */
 .form-group input[type="date"],
 .form-group input[type="time"] {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 .form-group select {
