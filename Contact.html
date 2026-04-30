@@ -107,15 +107,9 @@
         </div>
 
         <div class="form-group">
-          <label for="destination">Destination / Airport</label>
+          <label for="destination">Destination</label>
           <input type="text" id="destination" name="destination"
-                 list="airport-list"
-                 placeholder="e.g. JFK, LGA, HVN" required>
-          <datalist id="airport-list">
-            <option value="JFK">JFK — John F. Kennedy International</option>
-            <option value="LGA">LGA — LaGuardia Airport</option>
-            <option value="HVN">HVN — Tweed New Haven Airport</option>
-          </datalist>
+                 placeholder="e.g. JFK, LaGuardia, Stamford CT" required>
         </div>
 
         <button type="submit" class="submit-btn">
@@ -165,12 +159,8 @@
       });
 
       if (res.ok) {
-        form.innerHTML = `
-          <div style="text-align:center;padding:40px 0;">
-            <div style="font-size:48px;margin-bottom:20px;">✓</div>
-            <h2 style="color:#c9a84c;letter-spacing:1px;">Booking Confirmed!</h2>
-            <p style="color:#aaa;margin-top:12px;">We'll be in touch shortly to confirm your pickup details.</p>
-          </div>`;
+        const data = await res.json();
+        window.location.href = data.invoice_url;
       } else {
         throw new Error('Server error');
       }

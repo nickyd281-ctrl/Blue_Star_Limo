@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request, send_from_directory, send_file
 from flask_cors import CORS
 import psycopg2
+import uuid
 import os
 import io
 import traceback
@@ -10,6 +11,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+import smtplib
+from email.mime.text import MIMEText
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 )
@@ -53,7 +56,8 @@ def init_db():
             phone TEXT,
             destination TEXT,
             price INTEGER DEFAULT 0,
-            email TEXT
+            email TEXT,
+            invoice_id TEXT
         )
     """)
 
@@ -120,7 +124,38 @@ def row_to_trip(row):
         "destination": row[5],
         "price":       parse_price(row[6]),
         "email":       row[7] if len(row) > 7 else "",
+        "invoice_id":  row[8] if len(row) > 8 else None,
     }
+
+
+# ─── Email ────────────────────────────────────────────────────────────────────
+
+def send_confirmation_email(to_email, first_name, destination, date, invoice_url):
+    try:
+        msg = MIMEText(f"""
+Hello {first_name},
+
+Your ride has been successfully booked.
+
+Trip Details:
+Destination: {destination}
+Date: {date}
+
+You can view your invoice here:
+http://127.0.0.1:5001{invoice_url}
+
+Thank you for choosing Blue Star Limo.
+""")
+        msg["Subject"] = "Blue Star Limo - Booking Confirmation"
+        msg["From"] = "limobluestar1@gmail.com"
+        msg["To"] = to_email
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login("limobluestar1@gmail.com", "NAD1218#n")
+            server.send_message(msg)
+
+    except Exception as e:
+        print("Email failed:", e)
 
 
 # ─── HTML Pages ───────────────────────────────────────────────────────────────
@@ -152,6 +187,67 @@ def services():
 def admin():
     return send_from_directory(BASE_DIR, "trips.html")
 
+@app.route("/invoice/<invoice_id>")
+def invoice_page(invoice_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM trips WHERE invoice_id = %s", (invoice_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row is None:
+        return "Invoice not found.", 404
+
+    trip = row_to_trip(row)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Confirmed — Blue Star Limo</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .invoice-wrap {{ display:flex; align-items:center; justify-content:center; min-height:calc(100vh - 80px); }}
+    .invoice-box {{ max-width:540px; width:90%; background:#1a1a1a; border:1px solid #2a2a2a; padding:48px 40px; text-align:center; }}
+    .invoice-box h1 {{ color:#c9a84c; font-size:24px; letter-spacing:1px; margin:0 0 24px; }}
+    .invoice-table {{ width:100%; border-collapse:collapse; margin:24px 0; text-align:left; }}
+    .invoice-table td {{ padding:10px 0; color:#aaa; font-size:14px; border-bottom:1px solid #2a2a2a; }}
+    .invoice-table td:last-child {{ color:#fff; text-align:right; }}
+    .invoice-total td {{ color:#c9a84c !important; font-weight:700; font-size:16px; }}
+    .invoice-id {{ color:#555; font-size:11px; margin-top:20px; }}
+    .btn-home {{ display:inline-block; margin-top:28px; background:#c9a84c; color:#000; padding:12px 28px;
+                 font-weight:700; text-decoration:none; letter-spacing:2px; font-size:11px; text-transform:uppercase; }}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <span class="nav-brand">Blue Star Limo</span>
+    <div class="nav-links">
+      <a class="navitem" href="/">Home</a>
+      <a class="navitem" href="/team">Our Team</a>
+      <a class="navitem" href="/services">Services</a>
+      <a class="navitem" href="/contact">Book a Ride</a>
+    </div>
+  </nav>
+  <div class="invoice-wrap">
+    <div class="invoice-box">
+      <div style="font-size:40px;margin-bottom:16px;">&#10003;</div>
+      <h1>Booking Confirmed!</h1>
+      <table class="invoice-table">
+        <tr><td>Name</td><td>{trip['first_name']} {trip['last_name']}</td></tr>
+        <tr><td>Date</td><td>{trip['date']}</td></tr>
+        <tr><td>Destination</td><td>{trip['destination']}</td></tr>
+        <tr><td>Phone</td><td>{trip['phone']}</td></tr>
+        <tr class="invoice-total"><td>Estimated Fare</td><td>${trip['price']}</td></tr>
+      </table>
+      <p style="color:#aaa;font-size:13px;">We'll be in touch shortly to confirm your pickup details.</p>
+      <p class="invoice-id">Booking ID: {trip['invoice_id']}</p>
+      <a href="/contact" class="btn-home">Book Another Ride</a>
+    </div>
+  </div>
+</body>
+</html>"""
+
 
 # ─── Static Assets ────────────────────────────────────────────────────────────
 
@@ -164,51 +260,23 @@ def serve_images(filename):
     return send_from_directory(os.path.join(BASE_DIR, "images"), filename)
 
 
-# ─── API: Get All Trips ───────────────────────────────────────────────────────
+# ─── API: Trips ───────────────────────────────────────────────────────────────
 
 @app.route("/api/trips", methods=["GET"])
 def get_trips():
+    destination = request.args.get("destination")
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM trips ORDER BY id DESC")
+    if destination:
+        cursor.execute(
+            "SELECT * FROM trips WHERE destination ILIKE %s ORDER BY id DESC",
+            (destination,)
+        )
+    else:
+        cursor.execute("SELECT * FROM trips ORDER BY id DESC")
     rows = cursor.fetchall()
     conn.close()
-
-    trips = []
-    for r in rows:
-        trips.append({
-            "id":          r[0],
-            "date":        r[1],
-            "first_name":  r[2],
-            "last_name":   r[3],
-            "phone":       r[4],
-            "destination": r[5],
-            "price":       r[6],
-            "email":       r[7],
-        })
-    return jsonify(trips)
-
-
-@app.route("/api/trips/<string:destination>", methods=["GET"])
-def get_trips_by_destination(destination):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM trips WHERE destination = %s ORDER BY id DESC", (destination.upper(),))
-    rows = cursor.fetchall()
-    conn.close()
-    trips = []
-    for r in rows:
-        trips.append({
-            "id":          r[0],
-            "date":        r[1],
-            "first_name":  r[2],
-            "last_name":   r[3],
-            "phone":       r[4],
-            "destination": r[5],
-            "price":       r[6],
-            "email":       r[7],
-        })
-    return jsonify(trips)
+    return jsonify([row_to_trip(r) for r in rows])
 
 
 # ─── API: Create Booking ──────────────────────────────────────────────────────
@@ -220,80 +288,35 @@ def create_booking():
         first_name  = request.form.get("first_name")
         last_name   = request.form.get("last_name")
         phone       = request.form.get("phone")
-        destination = request.form.get("destination").upper()
+        destination = request.form.get("destination")
         email       = request.form.get("email")
+        invoice_id  = str(uuid.uuid4())
 
-        price         = PRICING.get(destination, 0)
-        price_display = f"${price}"
+        price = PRICING.get(destination.upper(), 0) if destination else 0
 
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO trips (date, first_name, last_name, phone, destination, price, email)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (date, first_name, last_name, phone, destination, price, email))
+            INSERT INTO trips (date, first_name, last_name, phone, destination, price, email, invoice_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (date, first_name, last_name, phone, destination, price, email, invoice_id))
         conn.commit()
         conn.close()
 
-        return f"""<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Booking Confirmed - Blue Star Limo</title>
-  <link rel="stylesheet" href="/css/styles.css">
-  <style>
-    .confirm-wrap {{
-      display: flex; align-items: center; justify-content: center;
-      min-height: calc(100vh - 80px);
-    }}
-    .confirm-box {{
-      max-width: 520px; width: 90%; text-align: center;
-      padding: 48px 40px; background: #1a1a1a; border: 1px solid #2a2a2a;
-    }}
-    .confirm-icon {{ font-size: 48px; margin-bottom: 20px; }}
-    .confirm-box h1 {{ color: #c9a84c; font-size: 26px; margin: 0 0 14px; letter-spacing: 1px; }}
-    .confirm-box p  {{ color: #aaa; font-size: 14px; line-height: 1.8; margin-bottom: 28px; }}
-    .confirm-box strong {{ color: #fff; }}
-    .confirm-box a  {{
-      display: inline-block; background: #c9a84c; color: #000;
-      padding: 14px 32px; font-weight: 700; text-decoration: none;
-      letter-spacing: 2px; font-size: 11px; text-transform: uppercase;
-      transition: background 0.3s;
-    }}
-    .confirm-box a:hover {{ background: #e0c46c; }}
-  </style>
-</head>
-<body>
-  <nav class="nav">
-    <span class="nav-brand">Blue Star Limo</span>
-    <div class="nav-links">
-      <a class="navitem" href="/">Home</a>
-      <a class="navitem" href="/team">Our Team</a>
-      <a class="navitem" href="/services">Services</a>
-      <a class="navitem active" href="/contact">Book a Ride</a>
-    </div>
-  </nav>
-  <div class="confirm-wrap">
-    <div class="confirm-box">
-      <div class="confirm-icon">✓</div>
-      <h1>Booking Confirmed!</h1>
-      <p>
-        Thank you, <strong>{first_name} {last_name}</strong>!<br>
-        Your reservation to <strong>{destination}</strong> on <strong>{date}</strong>
-        has been received.<br><br>
-        Estimated fare: <strong>{price_display}</strong><br><br>
-        We will be in touch shortly to confirm your pickup details.
-      </p>
-      <a href="/contact">Book Another Ride</a>
-    </div>
-  </div>
-</body>
-</html>"""
+        invoice_url = f"/invoice/{invoice_id}"
+
+        # ✅ SEND EMAIL (only if email provided)
+        if email:
+            send_confirmation_email(email, first_name, destination, date, invoice_url)
+
+        return jsonify({
+            "message":     "Booking confirmed.",
+            "invoice_url": invoice_url,
+        })
 
     except Exception:
         print(f'Error:\n{traceback.format_exc()}')
-        return "Booking failed", 500
-
+        return jsonify({"error": "Booking failed."}), 500
 
 # ─── API: Delete Trip ─────────────────────────────────────────────────────────
 
