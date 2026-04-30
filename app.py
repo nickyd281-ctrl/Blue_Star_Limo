@@ -558,5 +558,5 @@ def delete_review(review_id):
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    init_db()
+    # init_db()  ← comment this out
     app.run(debug=True, port=5001)
