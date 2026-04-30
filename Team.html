@@ -11,7 +11,10 @@
 
   <nav class="nav">
     <span class="nav-brand">Blue Star Limo</span>
-    <div class="nav-links">
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
       <a class="navitem" href="index.html">Home</a>
       <a class="navitem active" href="team.html">Our Team</a>
       <a class="navitem" href="services.html">Services</a>
@@ -162,5 +165,11 @@
     <p style="margin-top:20px;">&copy; 2024 Blue Star Limo LLC. All Rights Reserved.</p>
   </footer>
 
+
+<script>
+  var t=document.getElementById('nav-toggle'),l=document.getElementById('nav-links');
+  t.addEventListener('click',function(){t.classList.toggle('open');l.classList.toggle('open');});
+  l.querySelectorAll('.navitem').forEach(function(a){a.addEventListener('click',function(){t.classList.remove('open');l.classList.remove('open');});});
+</script>
 </body>
 </html>

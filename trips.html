@@ -212,6 +212,136 @@
       letter-spacing: 1px;
     }
 
+    /* ── Tabs ── */
+    .dash-tabs {
+      display: flex;
+      max-width: 1100px;
+      margin: 0 auto 28px;
+      border-bottom: 2px solid #1e3352;
+    }
+    .dash-tab {
+      padding: 12px 28px;
+      background: none;
+      border: none;
+      color: #7a9ab8;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+    }
+    .dash-tab.active { color: #c9a84c; border-bottom-color: #c9a84c; }
+    .dash-tab:hover:not(.active) { color: #fff; }
+
+    /* ── Reviews Admin ── */
+    .reviews-admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1100px;
+      margin: 0 auto 16px;
+    }
+    .reviews-admin-count {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #3a5a7a;
+    }
+    .review-admin-card {
+      max-width: 1100px;
+      margin: 0 auto 14px;
+      background: #112032;
+      border: 1px solid #1e3352;
+      padding: 20px 24px;
+      text-align: left;
+    }
+    .rac-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    .rac-author { font-size: 13px; font-weight: 700; color: #fff; }
+    .rac-location { font-size: 11px; color: #5ba8d4; margin-top: 2px; }
+    .rac-stars { color: #c9a84c; font-size: 13px; margin-top: 4px; }
+    .rac-date { font-size: 10px; color: #3a5a7a; letter-spacing: 1px; margin-bottom: 8px; }
+    .rac-badge {
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .rac-badge.pending { background: #2d1a00; color: #f59e0b; border: 1px solid #92400e; }
+    .rac-badge.approved { background: #0a1f0a; color: #4ade80; border: 1px solid #166534; }
+    .rac-text {
+      font-size: 13px;
+      color: #a8c0d6;
+      font-style: italic;
+      line-height: 1.7;
+      margin: 0 0 12px;
+    }
+    .rac-reply-existing {
+      background: #0d1b2a;
+      border-left: 3px solid #c9a84c;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #7a9ab8;
+      margin-bottom: 10px;
+    }
+    .rac-reply-label {
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #c9a84c;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .rac-reply-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: #0d1b2a;
+      border: 1px solid #1e3352;
+      color: #fff;
+      font-size: 13px;
+      font-family: inherit;
+      box-sizing: border-box;
+      outline: none;
+      resize: vertical;
+      min-height: 60px;
+      transition: border-color 0.3s;
+    }
+    .rac-reply-input:focus { border-color: #c9a84c; }
+    .rac-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .btn-approve {
+      padding: 7px 16px;
+      background: none;
+      border: 1px solid #166534;
+      color: #4ade80;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-approve:hover { background: #166534; color: #fff; }
+    .btn-save-reply {
+      padding: 7px 16px;
+      background: none;
+      border: 1px solid #c9a84c;
+      color: #c9a84c;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-save-reply:hover { background: #c9a84c; color: #000; }
+
     /* ── Summary bar ── */
     .summary-bar {
       display: flex;
@@ -263,6 +393,15 @@
     <button class="logout-btn" onclick="logout()">Logout</button>
   </div>
 
+  <!-- Tabs -->
+  <div class="dash-tabs">
+    <button class="dash-tab active" onclick="showTab('trips')">Trips</button>
+    <button class="dash-tab" onclick="showTab('reviews')">Reviews</button>
+  </div>
+
+  <!-- ── TRIPS TAB ── -->
+  <div id="tab-trips">
+
   <!-- Summary -->
   <div class="summary-bar" id="summary-bar">
     <div class="summary-item">
@@ -304,7 +443,18 @@
     <div id="trips"><p class="loading-msg">Loading trips...</p></div>
   </div>
 
-</div>
+  </div><!-- end #tab-trips -->
+
+  <!-- ── REVIEWS TAB ── -->
+  <div id="tab-reviews" style="display:none;">
+    <div class="reviews-admin-header">
+      <div class="reviews-admin-count" id="reviews-count"></div>
+      <button onclick="loadReviews()" style="padding:10px 24px;background:#c9a84c;color:#000;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border:none;">Refresh</button>
+    </div>
+    <div id="reviews-admin-list"><p class="loading-msg">Loading reviews...</p></div>
+  </div>
+
+</div><!-- end #dashboard -->
 
 
 <script>
@@ -420,14 +570,102 @@
     document.getElementById("trips").innerHTML = html;
   }
 
-  // ── Delete ───────────────────────────────────────────────────
+  // ── Delete Trip ──────────────────────────────────────────────
   function deleteTrip(id) {
     if (!confirm("Delete this trip? This cannot be undone.")) return;
     fetch(`/api/delete/${id}`, { method: "DELETE" })
-      .then(() => {
-        loadTrips();
-        loadSummary();
+      .then(() => { loadTrips(); loadSummary(); });
+  }
+
+  // ── Tab Switching ────────────────────────────────────────────
+  function showTab(name) {
+    document.getElementById("tab-trips").style.display   = name === "trips"   ? "" : "none";
+    document.getElementById("tab-reviews").style.display = name === "reviews" ? "" : "none";
+    document.querySelectorAll(".dash-tab").forEach(function(btn, i) {
+      btn.classList.toggle("active", (i === 0 && name === "trips") || (i === 1 && name === "reviews"));
+    });
+    if (name === "reviews") loadReviews();
+  }
+
+  // ── Reviews ──────────────────────────────────────────────────
+  function esc(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function starsText(n) { return "★".repeat(n) + "☆".repeat(5 - n); }
+
+  function loadReviews() {
+    document.getElementById("reviews-admin-list").innerHTML = '<p class="loading-msg">Loading...</p>';
+    fetch("/api/reviews/all")
+      .then(r => r.json())
+      .then(renderReviews)
+      .catch(() => {
+        document.getElementById("reviews-admin-list").innerHTML = '<p class="no-trips">Could not connect to server.</p>';
       });
+  }
+
+  function renderReviews(data) {
+    const countEl = document.getElementById("reviews-count");
+    const pending  = data.filter(r => !r.approved).length;
+    countEl.textContent = data.length + " review" + (data.length !== 1 ? "s" : "") + (pending ? " · " + pending + " pending" : "");
+
+    if (!data.length) {
+      document.getElementById("reviews-admin-list").innerHTML = '<p class="no-trips">No reviews yet.</p>';
+      return;
+    }
+
+    const html = data.map(rv => {
+      const badge = rv.approved
+        ? '<span class="rac-badge approved">Approved</span>'
+        : '<span class="rac-badge pending">Pending</span>';
+      const approveBtn = !rv.approved
+        ? `<button class="btn-approve" onclick="approveReview(${rv.id})">Approve</button>` : "";
+      const replySection = `
+        ${rv.reply ? `<div class="rac-reply-existing"><span class="rac-reply-label">Your Reply</span>${esc(rv.reply)}</div>` : ""}
+        <textarea class="rac-reply-input" id="reply-${rv.id}" placeholder="Write a reply...">${esc(rv.reply)}</textarea>
+      `;
+      return `
+        <div class="review-admin-card" id="rac-${rv.id}">
+          <div class="rac-top">
+            <div>
+              <div class="rac-author">${esc(rv.name)}</div>
+              ${rv.location ? `<div class="rac-location">${esc(rv.location)}</div>` : ""}
+              <div class="rac-stars">${starsText(rv.stars)}</div>
+            </div>
+            ${badge}
+          </div>
+          <div class="rac-date">${rv.created_at}</div>
+          <p class="rac-text">${esc(rv.text)}</p>
+          ${replySection}
+          <div class="rac-actions">
+            ${approveBtn}
+            <button class="btn-save-reply" onclick="saveReply(${rv.id})">Save Reply</button>
+            <button class="btn-delete" onclick="deleteReview(${rv.id})">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    document.getElementById("reviews-admin-list").innerHTML = html;
+  }
+
+  function approveReview(id) {
+    fetch(`/api/reviews/${id}/approve`, { method: "POST" })
+      .then(() => loadReviews());
+  }
+
+  function saveReply(id) {
+    const reply = document.getElementById("reply-" + id).value.trim();
+    fetch(`/api/reviews/${id}/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reply: reply })
+    }).then(() => loadReviews());
+  }
+
+  function deleteReview(id) {
+    if (!confirm("Delete this review? This cannot be undone.")) return;
+    fetch(`/api/reviews/${id}`, { method: "DELETE" })
+      .then(() => loadReviews());
   }
 </script>
 

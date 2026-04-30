@@ -4,13 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="/css/styles.css">
-  <title>Blue Star Limo LLC</title>
+  <title>Blue Star Limo LLC — Connecticut's Premier Luxury Transportation</title>
 </head>
 <body>
 
   <nav class="nav">
     <span class="nav-brand">Blue Star Limo</span>
-    <div class="nav-links">
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
       <a class="navitem active" href="index.html">Home</a>
       <a class="navitem" href="team.html">Our Team</a>
       <a class="navitem" href="services.html">Services</a>
@@ -18,44 +21,239 @@
     </div>
   </nav>
 
-  <div class="container">
-
-    <div class="header" style="display:flex; align-items:center; justify-content:center; padding:40px 0 20px; gap:20px;">
-      <img class="logo" src="/images/logo.png" alt="Blue Star Limo Logo">
-      <div>
-        <h1 class="title">Blue Star Limo</h1>
-        <h3 class="subtext">Connecticut's Premier Luxury Transportation</h3>
+  <!-- ── HERO ──────────────────────────────────────────── -->
+  <section class="home-hero">
+    <div class="home-hero-overlay"></div>
+    <div class="hero-content">
+      <img class="hero-logo" src="/images/logo.png" alt="Blue Star Limo Logo">
+      <p class="hero-eyebrow">Connecticut's Premier Luxury Transportation</p>
+      <h1 class="hero-title">Arrive in<br><em>Absolute Style</em></h1>
+      <div class="hero-divider"></div>
+      <p class="hero-sub">Professional chauffeurs. Immaculate vehicles.<br>An experience crafted for those who expect the best.</p>
+      <div class="hero-actions">
+        <a href="contact.html" class="btn-hero-primary">Book a Ride</a>
+        <a href="services.html" class="btn-hero-outline">View Our Fleet</a>
       </div>
     </div>
+  </section>
 
-    <div class="work">
-      <p>Our Fleet</p>
+  <!-- ── STATS BAR ─────────────────────────────────────── -->
+  <div class="stats-bar">
+    <div class="stat-block">
+      <div class="stat-num">18+</div>
+      <div class="stat-lbl">Years of Excellence</div>
     </div>
-
-    <div class="columns">
-      <div>
-        <p class="subwork">Cadillac XT6</p>
-        <div>
-          <img class="colphotos" src="/images/xt6logo.jpeg" alt="Cadillac XT6">
-        </div>
-      </div>
-
-      <div>
-        <p class="subwork">Cadillac Escalade</p>
-        <div>
-          <img class="colphotos" src="/images/ESCLOGO.JPEG" alt="Cadillac Escalade">
-        </div>
-      </div>
+    <div class="stat-block">
+      <div class="stat-num">3</div>
+      <div class="stat-lbl">Luxury Vehicles</div>
     </div>
-
+    <div class="stat-block">
+      <div class="stat-num">100%</div>
+      <div class="stat-lbl">Professional Chauffeurs</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-num">24/7</div>
+      <div class="stat-lbl">Always Available</div>
+    </div>
   </div>
+
+  <!-- ── FLEET PREVIEW ─────────────────────────────────── -->
+  <section class="fleet-section">
+    <div class="fleet-inner">
+      <div class="fleet-header">
+        <p class="section-label">Our Fleet</p>
+        <h2 class="fleet-title">Three Vehicles.<br><em>One Standard of Excellence.</em></h2>
+        <div class="gold-line"></div>
+      </div>
+      <div class="fleet-grid">
+
+        <div class="fleet-card">
+          <div class="fleet-card-num">01</div>
+          <!-- <img src="/images/cadillacesc.jpeg" alt="Cadillac Escalade" class="fleet-card-img"> -->
+          <div class="fleet-card-body">
+            <p class="section-label">Full-Size Luxury SUV</p>
+            <h3 class="fleet-card-name">Cadillac Escalade</h3>
+            <p class="fleet-card-desc">Commanding presence and first-class comfort. The ultimate choice for corporate events, weddings, and airport transfers. Seats up to 7 passengers.</p>
+            <a href="services.html" class="fleet-card-link">Learn More &rarr;</a>
+          </div>
+        </div>
+
+        <div class="fleet-card">
+          <div class="fleet-card-num">02</div>
+          <!-- <img src="/images/cadillacxt6.png" alt="Cadillac XT6" class="fleet-card-img"> -->
+          <div class="fleet-card-body">
+            <p class="section-label">Midsize Luxury SUV</p>
+            <h3 class="fleet-card-name">Cadillac XT6</h3>
+            <p class="fleet-card-desc">Understated elegance with a panoramic sunroof and refined cabin materials. The perfect ride for those who want luxury without compromise. Seats up to 6.</p>
+            <a href="services.html" class="fleet-card-link">Learn More &rarr;</a>
+          </div>
+        </div>
+
+        <div class="fleet-card">
+          <div class="fleet-card-num">03</div>
+          <!-- <img src="/images/suburban.png" alt="Chevrolet Suburban" class="fleet-card-img"> -->
+          <div class="fleet-card-body">
+            <p class="section-label">Full-Size Group SUV</p>
+            <h3 class="fleet-card-name">Chevrolet Suburban</h3>
+            <p class="fleet-card-desc">Maximum space without sacrificing comfort. Ideal for larger groups on corporate outings, weddings, and special occasions. Seats up to 8 passengers.</p>
+            <a href="services.html" class="fleet-card-link">Learn More &rarr;</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── WHY BLUE STAR ──────────────────────────────────── -->
+  <section class="why-section">
+    <div class="why-inner">
+      <p class="section-label">Why Blue Star</p>
+      <h2 class="why-title">The Blue Star Difference</h2>
+      <div class="gold-line"></div>
+      <div class="why-grid">
+        <div class="why-item">
+          <div class="why-icon">&#9201;</div>
+          <h4>Always Punctual</h4>
+          <p>We track your flight and arrive when we say — every single time. Your schedule is our schedule.</p>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">&#10024;</div>
+          <h4>Immaculate Vehicles</h4>
+          <p>Every vehicle is thoroughly cleaned and inspected before each and every trip.</p>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">&#128274;</div>
+          <h4>Safe &amp; Licensed</h4>
+          <p>All chauffeurs are fully licensed, insured, and trained to the highest professional standards.</p>
+        </div>
+        <div class="why-item">
+          <div class="why-icon">&#128081;</div>
+          <h4>White-Glove Service</h4>
+          <p>From the first booking to your final farewell — your comfort and satisfaction are our priority.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── REVIEWS ────────────────────────────────────────── -->
+  <section class="reviews-section">
+    <div class="reviews-inner">
+      <div class="reviews-header">
+        <p class="section-label">Client Testimonials</p>
+        <h2 class="reviews-title">What Our Clients Say</h2>
+        <div class="gold-line"></div>
+      </div>
+      <div class="reviews-grid" id="reviews-grid"></div>
+
+      <!-- ── SUBMIT A REVIEW ─────────────────────────── -->
+      <div class="review-submit-wrap">
+        <h3 class="review-submit-title">Share Your Experience</h3>
+        <div class="gold-line" style="margin:0 auto 32px;"></div>
+        <form class="review-form" id="review-form">
+          <div class="review-form-row">
+            <input type="text" id="rv-name" placeholder="Your Name *" required>
+            <input type="text" id="rv-location" placeholder="Your City / Client Type (optional)">
+          </div>
+          <textarea id="rv-text" placeholder="Write your review here... *" required></textarea>
+          <div class="review-form-row review-form-bottom-row">
+            <div class="star-picker">
+              <span class="star-picker-label">Rating:</span>
+              <span class="star-opt active" data-val="5">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+              <span class="star-opt" data-val="4">&#9733;&#9733;&#9733;&#9733;</span>
+              <span class="star-opt" data-val="3">&#9733;&#9733;&#9733;</span>
+              <span class="star-opt" data-val="2">&#9733;&#9733;</span>
+              <span class="star-opt" data-val="1">&#9733;</span>
+            </div>
+            <input type="hidden" id="rv-stars" value="5">
+            <button type="submit" class="btn-review-submit">Submit Review</button>
+          </div>
+          <div id="rv-msg" class="rv-msg" style="display:none;"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HOME CTA ───────────────────────────────────────── -->
+  <section class="home-cta">
+    <div class="home-cta-inner">
+      <p class="section-label home-cta-label">Ready to Ride?</p>
+      <h2 class="home-cta-title">Reserve Your Luxury Experience</h2>
+      <div class="home-cta-line"></div>
+      <p class="home-cta-sub">From airport transfers to special occasions &mdash; Blue Star Limo delivers every time.</p>
+      <a href="contact.html" class="btn-hero-primary">Book a Ride Today</a>
+    </div>
+  </section>
 
   <footer>
     <div class="footer-brand">Blue Star Limo</div>
     <p>Connecticut's Premier Luxury Transportation</p>
     <p style="margin-top:12px;"><a href="mailto:limobluestar1@gmail.com">limobluestar1@gmail.com</a></p>
-    <p style="margin-top:20px;">&copy; 2024 Blue Star Limo LLC. All Rights Reserved.</p>
+    <p style="margin-top:20px;">&copy; 2025 Blue Star Limo LLC. All Rights Reserved.</p>
   </footer>
 
+<script>
+  var t=document.getElementById('nav-toggle'),l=document.getElementById('nav-links');
+  t.addEventListener('click',function(){t.classList.toggle('open');l.classList.toggle('open');});
+  l.querySelectorAll('.navitem').forEach(function(a){a.addEventListener('click',function(){t.classList.remove('open');l.classList.remove('open');});});
+</script>
+<script>
+(function(){
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function stars(n){var s='';for(var i=0;i<5;i++)s+='<span style="'+(i<n?'':'opacity:.25')+'">&#9733;</span>';return s;}
+
+  function loadReviews(){
+    fetch('/api/reviews').then(function(r){return r.json();}).then(function(data){
+      var grid=document.getElementById('reviews-grid');
+      if(!data.length){
+        grid.innerHTML='<p style="color:#94a3b8;text-align:center;grid-column:1/-1;padding:32px 0;">No reviews yet — be the first to share your experience!</p>';
+        return;
+      }
+      grid.innerHTML=data.map(function(rv){
+        var replyHtml=rv.reply?'<div class="review-reply"><span class="review-reply-label">Blue Star Limo</span>'+esc(rv.reply)+'</div>':'';
+        return '<div class="review-card"><div class="review-quote-mark">&ldquo;</div><div class="review-stars">'+stars(rv.stars)+'</div><p class="review-text">'+esc(rv.text)+'</p><div class="review-author">'+esc(rv.name)+'</div>'+(rv.location?'<div class="review-location">'+esc(rv.location)+'</div>':'')+replyHtml+'</div>';
+      }).join('');
+    }).catch(function(){});
+  }
+  loadReviews();
+
+  // Star picker
+  document.querySelectorAll('.star-opt').forEach(function(el){
+    el.addEventListener('click',function(){
+      document.getElementById('rv-stars').value=this.dataset.val;
+      document.querySelectorAll('.star-opt').forEach(function(s){s.classList.remove('active');});
+      this.classList.add('active');
+    });
+  });
+
+  // Submit form
+  document.getElementById('review-form').addEventListener('submit',function(e){
+    e.preventDefault();
+    var btn=this.querySelector('button[type="submit"]');
+    btn.disabled=true;
+    fetch('/api/reviews',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        name:document.getElementById('rv-name').value,
+        location:document.getElementById('rv-location').value,
+        text:document.getElementById('rv-text').value,
+        stars:parseInt(document.getElementById('rv-stars').value)
+      })
+    }).then(function(r){return r.json();}).then(function(data){
+      var msg=document.getElementById('rv-msg');
+      msg.textContent=data.message||data.error;
+      msg.className='rv-msg '+(data.error?'rv-msg-error':'rv-msg-ok');
+      msg.style.display='block';
+      if(!data.error){
+        document.getElementById('review-form').reset();
+        document.querySelectorAll('.star-opt').forEach(function(s){s.classList.remove('active');});
+        document.querySelector('.star-opt[data-val="5"]').classList.add('active');
+        document.getElementById('rv-stars').value=5;
+      }
+      btn.disabled=false;
+    }).catch(function(){btn.disabled=false;});
+  });
+})();
+</script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-from flask import Flask, jsonify, request, send_from_directory, make_response, send_file
+from flask import Flask, jsonify, request, send_from_directory, send_file
 from flask_cors import CORS
-import sqlite3
+import psycopg2
 import os
 import io
 import traceback
@@ -18,7 +18,6 @@ app = Flask(__name__)
 CORS(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH  = os.path.join(BASE_DIR, "BlueStarLimo.db")
 
 PRICING = {"JFK": 250, "LGA": 290, "HVN": 100}
 
@@ -29,14 +28,67 @@ AIRPORT_LABELS = {
 }
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── DB ───────────────────────────────────────────────────────────────────────
 
 def get_db():
-    return sqlite3.connect(DB_PATH)
+    return psycopg2.connect(
+        dbname="bluestar_limo",
+        user="postgres",
+        password=os.environ.get("DB_PASSWORD"),
+        host="localhost",
+        port="5432"
+    )
 
+
+def init_db():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS trips (
+            id SERIAL PRIMARY KEY,
+            date TEXT,
+            first_name TEXT,
+            last_name TEXT,
+            phone TEXT,
+            destination TEXT,
+            price INTEGER DEFAULT 0,
+            email TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS reviews (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            location TEXT,
+            reviewtext TEXT NOT NULL,
+            stars INTEGER DEFAULT 5,
+            approved INTEGER DEFAULT 0,
+            adminreply TEXT,
+            createdat TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+
+    cursor.execute("SELECT COUNT(*) FROM reviews")
+    if cursor.fetchone()[0] == 0:
+        seeds = [
+            ("Michael T.", "Corporate Client — Stamford, CT", "Absolutely flawless service from start to finish. The Escalade was spotless, Ashish was punctual and incredibly professional. Blue Star Limo is my go-to for every airport run.", 5, 1, None, "2025-01-01 00:00:00"),
+            ("Jennifer & David R.", "Wedding Clients — Greenwich, CT", "We used Blue Star for our wedding day and it was perfect. Sonal was so attentive during booking and made everything completely stress-free. Could not recommend them more!", 5, 1, None, "2025-01-02 00:00:00"),
+            ("Robert K.", "Frequent Traveler — New Haven, CT", "I've used many car services across Connecticut, but none come close to Blue Star. The XT6 was luxurious and the ride was smooth. I will not use any other service.", 5, 1, None, "2025-01-03 00:00:00"),
+        ]
+        cursor.executemany(
+            "INSERT INTO reviews (name, location, reviewtext, stars, approved, adminreply, createdat) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            seeds
+        )
+    conn.commit()
+    conn.close()
+
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def parse_price(raw):
-    """Return price as int, handling legacy '$250' strings."""
     if raw is None:
         return 0
     try:
@@ -45,16 +97,29 @@ def parse_price(raw):
         return 0
 
 
+def row_to_review(row):
+    return {
+        "id":       row[0],
+        "name":     row[1],
+        "location": row[2] or "",
+        "text":     row[3],
+        "stars":    row[4],
+        "approved": bool(row[5]),
+        "reply":    row[6] or "",
+        "created_at": row[7],
+    }
+
+
 def row_to_trip(row):
     return {
-        "id":         row[0],
-        "date":       row[1],
-        "first_name": row[2],
-        "last_name":  row[3],
-        "phone":      row[4],
+        "id":          row[0],
+        "date":        row[1],
+        "first_name":  row[2],
+        "last_name":   row[3],
+        "phone":       row[4],
         "destination": row[5],
-        "price":      parse_price(row[6]),
-        "email":      row[7] if len(row) > 7 else "",
+        "price":       parse_price(row[6]),
+        "email":       row[7] if len(row) > 7 else "",
     }
 
 
@@ -105,25 +170,45 @@ def serve_images(filename):
 def get_trips():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Trips ORDER BY Id DESC")
+    cursor.execute("SELECT * FROM trips ORDER BY id DESC")
     rows = cursor.fetchall()
     conn.close()
-    return jsonify([row_to_trip(r) for r in rows])
+
+    trips = []
+    for r in rows:
+        trips.append({
+            "id":          r[0],
+            "date":        r[1],
+            "first_name":  r[2],
+            "last_name":   r[3],
+            "phone":       r[4],
+            "destination": r[5],
+            "price":       r[6],
+            "email":       r[7],
+        })
+    return jsonify(trips)
 
 
-# ─── API: Filter by Destination ──────────────────────────────────────────────
-
-@app.route("/api/trips/<destination>", methods=["GET"])
+@app.route("/api/trips/<string:destination>", methods=["GET"])
 def get_trips_by_destination(destination):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT * FROM Trips WHERE Destination = ? ORDER BY Id DESC",
-        (destination.upper(),)
-    )
+    cursor.execute("SELECT * FROM trips WHERE destination = %s ORDER BY id DESC", (destination.upper(),))
     rows = cursor.fetchall()
     conn.close()
-    return jsonify([row_to_trip(r) for r in rows])
+    trips = []
+    for r in rows:
+        trips.append({
+            "id":          r[0],
+            "date":        r[1],
+            "first_name":  r[2],
+            "last_name":   r[3],
+            "phone":       r[4],
+            "destination": r[5],
+            "price":       r[6],
+            "email":       r[7],
+        })
+    return jsonify(trips)
 
 
 # ─── API: Create Booking ──────────────────────────────────────────────────────
@@ -131,33 +216,30 @@ def get_trips_by_destination(destination):
 @app.route("/api/book", methods=["POST"])
 def create_booking():
     try:
-        date        = request.form.get("date", "").strip()
-        first_name  = request.form.get("first_name", "").strip()
-        last_name   = request.form.get("last_name", "").strip()
-        phone       = request.form.get("phone", "").strip()
-        destination = request.form.get("destination", "").strip().upper()
-        email       = request.form.get("email", "").strip()
+        date        = request.form.get("date")
+        first_name  = request.form.get("first_name")
+        last_name   = request.form.get("last_name")
+        phone       = request.form.get("phone")
+        destination = request.form.get("destination").upper()
+        email       = request.form.get("email")
 
-        price = PRICING.get(destination, 0)
+        price         = PRICING.get(destination, 0)
+        price_display = f"${price}"
 
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute(
-            'INSERT INTO Trips (Dates, "First Name", "Last Name", "Phone Number", Destination, Price, Email) '
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (date, first_name, last_name, phone, destination, price, email),
-        )
+        cursor.execute("""
+            INSERT INTO trips (date, first_name, last_name, phone, destination, price, email)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (date, first_name, last_name, phone, destination, price, email))
         conn.commit()
         conn.close()
 
-        price_display = f"${price:,}" if price else "TBD (call for pricing)"
-
-        return f"""<!DOCTYPE html>
-<html lang="en">
+        return f"""<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Booking Confirmed — Blue Star Limo</title>
+  <title>Booking Confirmed - Blue Star Limo</title>
   <link rel="stylesheet" href="/css/styles.css">
   <style>
     .confirm-wrap {{
@@ -207,8 +289,10 @@ def create_booking():
   </div>
 </body>
 </html>"""
+
     except Exception:
         print(f'Error:\n{traceback.format_exc()}')
+        return "Booking failed", 500
 
 
 # ─── API: Delete Trip ─────────────────────────────────────────────────────────
@@ -217,10 +301,10 @@ def create_booking():
 def delete_trip(trip_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM Trips WHERE Id = ?", (trip_id,))
+    cursor.execute("DELETE FROM trips WHERE id = %s", (trip_id,))
     conn.commit()
     conn.close()
-    return jsonify({"message": "Trip deleted", "id": trip_id})
+    return jsonify({"message": "Deleted"})
 
 
 # ─── API: Invoice PDF ─────────────────────────────────────────────────────────
@@ -229,7 +313,7 @@ def delete_trip(trip_id):
 def generate_invoice(trip_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Trips WHERE Id = ?", (trip_id,))
+    cursor.execute("SELECT * FROM trips WHERE id = %s", (trip_id,))
     row = cursor.fetchone()
     conn.close()
 
@@ -238,7 +322,6 @@ def generate_invoice(trip_id):
 
     trip = row_to_trip(row)
 
-    # 📄 Create PDF in memory
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -249,7 +332,6 @@ def generate_invoice(trip_id):
         bottomMargin=0.75 * inch,
     )
 
-    # 🎨 Colors
     GOLD   = colors.HexColor("#c9a84c")
     DARK   = colors.HexColor("#111111")
     CREAM  = colors.HexColor("#f5f0e8")
@@ -257,15 +339,14 @@ def generate_invoice(trip_id):
     BORDER = colors.HexColor("#cccccc")
     WHITE  = colors.white
 
-    # 🎨 Styles
     def ps(name, **kw):
         return ParagraphStyle(name, **kw)
 
-    s_company = ps("Company", fontSize=30, textColor=GOLD, fontName="Helvetica-Bold", spaceAfter=4)
-    s_tagline = ps("Tagline", fontSize=10, textColor=MUTED, fontName="Helvetica", spaceAfter=4)
+    s_company   = ps("Company",  fontSize=30, textColor=GOLD, fontName="Helvetica-Bold", spaceAfter=4)
+    s_tagline   = ps("Tagline",  fontSize=10, textColor=MUTED, fontName="Helvetica", spaceAfter=4)
     s_inv_label = ps("InvLabel", fontSize=36, textColor=DARK, fontName="Helvetica-Bold", alignment=TA_RIGHT)
 
-    s_meta_r = ps("MetaR", fontSize=11, textColor=DARK, alignment=TA_RIGHT, spaceAfter=6)
+    s_meta_r    = ps("MetaR",   fontSize=11, textColor=DARK, alignment=TA_RIGHT, spaceAfter=6)
     s_meta_r_sm = ps("MetaRSm", fontSize=10, textColor=DARK, alignment=TA_RIGHT)
 
     s_section = ps(
@@ -278,33 +359,29 @@ def generate_invoice(trip_id):
         letterSpacing=3
     )
 
-    s_body = ps("Body", fontSize=11, textColor=DARK, spaceAfter=5)
+    s_body       = ps("Body",      fontSize=11, textColor=DARK,  spaceAfter=5)
     s_body_muted = ps("BodyMuted", fontSize=10, textColor=MUTED, spaceAfter=4)
 
-    s_th = ps("TH", fontSize=10, fontName="Helvetica-Bold", textColor=WHITE)
+    s_th   = ps("TH",  fontSize=10, fontName="Helvetica-Bold", textColor=WHITE)
     s_th_c = ps("THC", fontSize=10, fontName="Helvetica-Bold", textColor=WHITE, alignment=TA_CENTER)
     s_th_r = ps("THR", fontSize=10, fontName="Helvetica-Bold", textColor=WHITE, alignment=TA_RIGHT)
 
-    s_td = ps("TD", fontSize=12, textColor=DARK)
+    s_td   = ps("TD",  fontSize=12, textColor=DARK)
     s_td_c = ps("TDC", fontSize=12, textColor=DARK, alignment=TA_CENTER)
     s_td_r = ps("TDR", fontSize=12, textColor=DARK, alignment=TA_RIGHT)
 
     s_total_lbl = ps("TotalLbl", fontSize=14, textColor=DARK, fontName="Helvetica-Bold", alignment=TA_RIGHT)
     s_total_val = ps("TotalVal", fontSize=28, textColor=GOLD, fontName="Helvetica-Bold", alignment=TA_RIGHT)
 
-    s_footer = ps("Footer", fontSize=9, textColor=MUTED, alignment=TA_CENTER)
+    s_footer   = ps("Footer",  fontSize=9, textColor=MUTED, alignment=TA_CENTER)
     s_footer_i = ps("FooterI", fontSize=9, textColor=MUTED, alignment=TA_CENTER, spaceBefore=6)
 
-    # 🧾 Invoice Info
     invoice_num = f"BSL-{trip['id']:04d}"
-    generated = datetime.now().strftime("%B %d, %Y")
-    dest_label = AIRPORT_LABELS.get(trip["destination"], trip["destination"])
+    generated   = datetime.now().strftime("%B %d, %Y")
+    dest_label  = AIRPORT_LABELS.get(trip["destination"], trip["destination"])
 
     story = []
 
-    # =========================
-    # HEADER
-    # =========================
     hdr = Table([
         [Paragraph("Blue Star Limo", s_company),
          Paragraph("INVOICE", s_inv_label)],
@@ -315,9 +392,9 @@ def generate_invoice(trip_id):
     ], colWidths=[4 * inch, 3 * inch])
 
     hdr.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
 
@@ -325,55 +402,40 @@ def generate_invoice(trip_id):
     story.append(Spacer(1, 20))
     story.append(HRFlowable(width="100%", thickness=3, color=GOLD, spaceAfter=25))
 
-    # =========================
-    # BILL TO
-    # =========================
     story.append(Paragraph("BILL TO", s_section))
     story.append(Paragraph(
         f"<font size=14><b>{trip['first_name']} {trip['last_name']}</b></font>",
         s_body
     ))
-
     if trip["phone"]:
         story.append(Paragraph(trip["phone"], s_body_muted))
-
     story.append(Spacer(1, 25))
 
-    # =========================
-    # TRIP DETAILS
-    # =========================
     story.append(Paragraph("TRIP DETAILS", s_section))
 
     svc_tbl = Table([
         [Paragraph("DESCRIPTION", s_th),
          Paragraph("DATE", s_th_c),
          Paragraph("AMOUNT", s_th_r)],
-
         [Paragraph(f"Airport Transfer — {dest_label}", s_td),
          Paragraph(trip["date"], s_td_c),
          Paragraph(f"{trip['price']}", s_td_r)],
     ], colWidths=[3.5 * inch, 1.5 * inch, 2 * inch])
 
     svc_tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), DARK),
-        ("BACKGROUND", (0, 1), (-1, -1), CREAM),
-
-        ("TOPPADDING", (0, 0), (-1, -1), 16),
+        ("BACKGROUND",    (0, 0), (-1,  0), DARK),
+        ("BACKGROUND",    (0, 1), (-1, -1), CREAM),
+        ("TOPPADDING",    (0, 0), (-1, -1), 16),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 16),
-
-        ("LEFTPADDING", (0, 0), (-1, -1), 14),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 14),
-
-        ("LINEBELOW", (0, 0), (-1, 0), 2, GOLD),
-        ("LINEBELOW", (0, -1), (-1, -1), 1, BORDER),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 14),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 14),
+        ("LINEBELOW",     (0, 0), (-1,  0), 2, GOLD),
+        ("LINEBELOW",     (0,-1), (-1, -1), 1, BORDER),
     ]))
 
     story.append(svc_tbl)
     story.append(Spacer(1, 25))
 
-    # =========================
-    # TOTAL
-    # =========================
     tot_tbl = Table([
         ["",
          Paragraph("TOTAL DUE", s_total_lbl),
@@ -381,32 +443,26 @@ def generate_invoice(trip_id):
     ], colWidths=[3.5 * inch, 1.5 * inch, 2 * inch])
 
     tot_tbl.setStyle(TableStyle([
-        ("LEFTPADDING", (0, 0), (-1, -1), 14),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 14),
-        ("TOPPADDING", (0, 0), (-1, -1), 14),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 14),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 14),
+        ("TOPPADDING",    (0, 0), (-1, -1), 14),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
-        ("LINEABOVE", (1, 0), (-1, 0), 2, GOLD),
+        ("LINEABOVE",     (1, 0), (-1,  0), 2, GOLD),
     ]))
 
     story.append(tot_tbl)
     story.append(Spacer(1, 60))
 
-    # =========================
-    # FOOTER
-    # =========================
     story.append(HRFlowable(width="100%", thickness=1, color=BORDER, spaceAfter=12))
-
     story.append(Paragraph(
-        "Blue Star Limo LLC · Connecticut’s Premier Luxury Transportation · limobluestar1@gmail.com · Available 24/7",
+        "Blue Star Limo LLC · Connecticut's Premier Luxury Transportation · limobluestar1@gmail.com · Available 24/7",
         s_footer
     ))
-
     story.append(Paragraph(
         "Thank you for choosing Blue Star Limo — we look forward to serving you.",
         s_footer_i
     ))
 
-    # BUILD PDF
     doc.build(story)
     buffer.seek(0)
 
@@ -417,7 +473,90 @@ def generate_invoice(trip_id):
         mimetype="application/pdf"
     )
 
+
+# ─── API: Reviews (Public) ────────────────────────────────────────────────────
+
+@app.route("/api/reviews", methods=["GET"])
+def get_reviews():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM reviews WHERE approved = 1 ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify([row_to_review(r) for r in rows])
+
+
+@app.route("/api/reviews", methods=["POST"])
+def submit_review():
+    data     = request.get_json() or {}
+    name     = (data.get("name", "") or "").strip()
+    location = (data.get("location", "") or "").strip()
+    text     = (data.get("text", "") or "").strip()
+    stars    = int(data.get("stars", 5))
+
+    if not name or not text:
+        return jsonify({"error": "Name and review text are required."}), 400
+    if not (1 <= stars <= 5):
+        stars = 5
+
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO reviews (name, location, reviewtext, stars, approved, adminreply, createdat) VALUES (%s, %s, %s, %s, 0, NULL, %s)",
+        (name, location, text, stars, created_at),
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Thank you! Your review has been submitted and will appear after approval."})
+
+
+# ─── API: Reviews (Admin) ─────────────────────────────────────────────────────
+
+@app.route("/api/reviews/all", methods=["GET"])
+def get_all_reviews():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM reviews ORDER BY approved ASC, id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify([row_to_review(r) for r in rows])
+
+
+@app.route("/api/reviews/<int:review_id>/approve", methods=["POST"])
+def approve_review(review_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE reviews SET approved = 1 WHERE id = %s", (review_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Review approved.", "id": review_id})
+
+
+@app.route("/api/reviews/<int:review_id>/reply", methods=["POST"])
+def reply_review(review_id):
+    data   = request.get_json() or {}
+    reply  = (data.get("reply", "") or "").strip()
+    conn   = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE reviews SET adminreply = %s WHERE id = %s", (reply or None, review_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Reply saved.", "id": review_id})
+
+
+@app.route("/api/reviews/<int:review_id>", methods=["DELETE"])
+def delete_review(review_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM reviews WHERE id = %s", (review_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Review deleted.", "id": review_id})
+
+
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    init_db()
     app.run(debug=True, port=5001)
