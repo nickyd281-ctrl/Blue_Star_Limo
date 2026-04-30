@@ -133,19 +133,19 @@ def index():
 @app.route("/contact.html")
 @app.route("/Contact.html")
 def contact():
-    return send_from_directory(BASE_DIR, "Contact.html")
+    return send_from_directory(BASE_DIR, "contact.html")
 
 @app.route("/team")
 @app.route("/team.html")
 @app.route("/Team.html")
 def team():
-    return send_from_directory(BASE_DIR, "Team.html")
+    return send_from_directory(BASE_DIR, "team.html")
 
 @app.route("/services")
 @app.route("/services.html")
 @app.route("/Services.html")
 def services():
-    return send_from_directory(BASE_DIR, "Services.html")
+    return send_from_directory(BASE_DIR, "services.html")
 
 @app.route("/admin")
 @app.route("/trips.html")
