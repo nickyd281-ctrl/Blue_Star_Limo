@@ -38,6 +38,9 @@ AIRPORT_LABELS = {
 # ─── DB ───────────────────────────────────────────────────────────────────────
 
 def get_db():
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        return psycopg2.connect(database_url)
     return psycopg2.connect(
         dbname="bluestar_limo",
         user="postgres",
@@ -758,9 +761,15 @@ def update_trip_price(trip_id):
     return jsonify({"id": trip_id, "price": price})
 
 
+# ─── Startup ──────────────────────────────────────────────────────────────────
+
+try:
+    init_db()
+except Exception as e:
+    print(f"DB init warning: {e}")
+
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    init_db()
     port = int(os.environ.get("PORT", 5001))
     app.run(host="0.0.0.0", port=port)
