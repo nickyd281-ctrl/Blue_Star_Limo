@@ -1,11 +1,15 @@
 from flask import Flask, jsonify, request, send_from_directory, send_file
 from flask_cors import CORS
+from dotenv import load_dotenv
 import psycopg2
 import uuid
 import os
 import io
 import traceback
 from datetime import datetime
+
+load_dotenv()
+
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
@@ -87,6 +91,20 @@ def init_db():
             seeds
         )
     conn.commit()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pricing (
+            destination TEXT PRIMARY KEY,
+            price INTEGER NOT NULL
+        )
+    """)
+    conn.commit()
+
+    cursor.execute("SELECT COUNT(*) FROM pricing")
+    if cursor.fetchone()[0] == 0:
+        for dest, price in PRICING.items():
+            cursor.execute("INSERT INTO pricing (destination, price) VALUES (%s, %s)", (dest, price))
+    conn.commit()
     conn.close()
 
 
@@ -128,7 +146,47 @@ def row_to_trip(row):
     }
 
 
+def get_pricing():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT destination, price FROM pricing")
+    rows = cursor.fetchall()
+    conn.close()
+    return {row[0]: row[1] for row in rows} if rows else PRICING
+
+
 # ─── Email ────────────────────────────────────────────────────────────────────
+
+def send_admin_notification(first_name, last_name, phone, email, destination, date, price, invoice_url):
+    try:
+        base_url = os.environ.get("BASE_URL", "http://127.0.0.1:5001")
+        msg = MIMEText(f"""
+New booking received on Blue Star Limo.
+
+Customer Details:
+Name:        {first_name} {last_name}
+Phone:       {phone}
+Email:       {email or "Not provided"}
+
+Trip Details:
+Destination: {destination}
+Date:        {date}
+Price:       ${price}
+
+View invoice:
+{base_url}{invoice_url}
+""")
+        msg["Subject"] = f"New Booking — {first_name} {last_name} ({destination}, {date})"
+        msg["From"] = "limobluestar1@gmail.com"
+        msg["To"] = "limobluestar1@gmail.com"
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login("limobluestar1@gmail.com", os.environ.get("EMAIL_PASSWORD", ""))
+            server.send_message(msg)
+
+    except Exception as e:
+        print("Admin notification failed:", e)
+
 
 def send_confirmation_email(to_email, first_name, destination, date, invoice_url):
     try:
@@ -142,7 +200,7 @@ Destination: {destination}
 Date: {date}
 
 You can view your invoice here:
-http://127.0.0.1:5001{invoice_url}
+{os.environ.get("BASE_URL", "http://127.0.0.1:5001")}{invoice_url}
 
 Thank you for choosing Blue Star Limo.
 """)
@@ -151,7 +209,7 @@ Thank you for choosing Blue Star Limo.
         msg["To"] = to_email
 
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login("limobluestar1@gmail.com", "NAD1218#n")
+            server.login("limobluestar1@gmail.com", os.environ.get("EMAIL_PASSWORD", ""))
             server.send_message(msg)
 
     except Exception as e:
@@ -260,6 +318,18 @@ def serve_images(filename):
     return send_from_directory(os.path.join(BASE_DIR, "images"), filename)
 
 
+# ─── API: Admin Login ────────────────────────────────────────────────────────
+
+@app.route("/api/admin/login", methods=["POST"])
+def admin_login():
+    data = request.get_json() or {}
+    password = data.get("password", "")
+    correct = os.environ.get("ADMIN_PASSWORD", "")
+    if password == correct:
+        return jsonify({"ok": True})
+    return jsonify({"ok": False}), 401
+
+
 # ─── API: Trips ───────────────────────────────────────────────────────────────
 
 @app.route("/api/trips", methods=["GET"])
@@ -292,7 +362,7 @@ def create_booking():
         email       = request.form.get("email")
         invoice_id  = str(uuid.uuid4())
 
-        price = PRICING.get(destination.upper(), 0) if destination else 0
+        price = get_pricing().get(destination.upper(), 0) if destination else 0
 
         conn = get_db()
         cursor = conn.cursor()
@@ -305,7 +375,8 @@ def create_booking():
 
         invoice_url = f"/invoice/{invoice_id}"
 
-        # ✅ SEND EMAIL (only if email provided)
+        send_admin_notification(first_name, last_name, phone, email, destination, date, price, invoice_url)
+
         if email:
             send_confirmation_email(email, first_name, destination, date, invoice_url)
 
@@ -346,144 +417,212 @@ def generate_invoice(trip_id):
     trip = row_to_trip(row)
 
     buffer = io.BytesIO()
+    W = 7.2 * inch
     doc = SimpleDocTemplate(
         buffer,
         pagesize=letter,
-        rightMargin=0.75 * inch,
-        leftMargin=0.75 * inch,
-        topMargin=0.75 * inch,
-        bottomMargin=0.75 * inch,
+        rightMargin=0.65 * inch,
+        leftMargin=0.65 * inch,
+        topMargin=0.65 * inch,
+        bottomMargin=0.65 * inch,
     )
 
-    GOLD   = colors.HexColor("#c9a84c")
-    DARK   = colors.HexColor("#111111")
-    CREAM  = colors.HexColor("#f5f0e8")
-    MUTED  = colors.HexColor("#888888")
-    BORDER = colors.HexColor("#cccccc")
-    WHITE  = colors.white
+    GOLD    = colors.HexColor("#c9a84c")
+    DARK    = colors.HexColor("#0d1117")
+    DARK2   = colors.HexColor("#161b22")
+    CREAM   = colors.HexColor("#f8f5ef")
+    MUTED   = colors.HexColor("#888888")
+    LIGHT   = colors.HexColor("#aaaaaa")
+    BORDER  = colors.HexColor("#dddddd")
+    NOTE_BG = colors.HexColor("#fdf8f0")
+    WHITE   = colors.white
 
     def ps(name, **kw):
         return ParagraphStyle(name, **kw)
 
-    s_company   = ps("Company",  fontSize=30, textColor=GOLD, fontName="Helvetica-Bold", spaceAfter=4)
-    s_tagline   = ps("Tagline",  fontSize=10, textColor=MUTED, fontName="Helvetica", spaceAfter=4)
-    s_inv_label = ps("InvLabel", fontSize=36, textColor=DARK, fontName="Helvetica-Bold", alignment=TA_RIGHT)
+    # Header styles (on dark bg)
+    s_company  = ps("Co",  fontSize=24, textColor=GOLD,  fontName="Helvetica-Bold")
+    s_tagline  = ps("Tag", fontSize=9,  textColor=LIGHT, fontName="Helvetica", spaceAfter=2)
+    s_contact  = ps("Con", fontSize=9,  textColor=LIGHT, fontName="Helvetica")
+    s_inv_word = ps("IW",  fontSize=30, textColor=WHITE, fontName="Helvetica-Bold",  alignment=TA_RIGHT)
+    s_inv_num  = ps("IN",  fontSize=12, textColor=GOLD,  fontName="Helvetica-Bold",  alignment=TA_RIGHT, spaceBefore=3)
+    s_inv_date = ps("ID",  fontSize=9,  textColor=LIGHT, alignment=TA_RIGHT, spaceAfter=0)
 
-    s_meta_r    = ps("MetaR",   fontSize=11, textColor=DARK, alignment=TA_RIGHT, spaceAfter=6)
-    s_meta_r_sm = ps("MetaRSm", fontSize=10, textColor=DARK, alignment=TA_RIGHT)
+    # Info section styles (on white)
+    s_lbl      = ps("Lbl",  fontSize=7,  textColor=GOLD,  fontName="Helvetica-Bold", letterSpacing=2, spaceAfter=5)
+    s_name     = ps("Nm",   fontSize=15, textColor=DARK,  fontName="Helvetica-Bold", spaceAfter=4)
+    s_info     = ps("Inf",  fontSize=10, textColor=colors.HexColor("#444444"), spaceAfter=3)
+    s_tlbl     = ps("TLbl", fontSize=8,  textColor=MUTED, fontName="Helvetica-Bold", letterSpacing=1, spaceAfter=2)
+    s_tval     = ps("TVl",  fontSize=11, textColor=DARK,  fontName="Helvetica-Bold", spaceAfter=10)
 
-    s_section = ps(
-        "Section",
-        fontSize=10,
-        textColor=GOLD,
-        fontName="Helvetica-Bold",
-        spaceBefore=25,
-        spaceAfter=10,
-        letterSpacing=3
-    )
+    # Table header/cell styles
+    s_th   = ps("TH",  fontSize=9,  fontName="Helvetica-Bold", textColor=WHITE)
+    s_th_c = ps("THC", fontSize=9,  fontName="Helvetica-Bold", textColor=WHITE,  alignment=TA_CENTER)
+    s_th_r = ps("THR", fontSize=9,  fontName="Helvetica-Bold", textColor=WHITE,  alignment=TA_RIGHT)
+    s_td   = ps("TD",  fontSize=11, textColor=DARK)
+    s_td_s = ps("TDS", fontSize=9,  textColor=MUTED, spaceAfter=0)
+    s_td_c = ps("TDC", fontSize=11, textColor=DARK,  alignment=TA_CENTER)
+    s_td_r = ps("TDR", fontSize=11, textColor=DARK,  alignment=TA_RIGHT)
 
-    s_body       = ps("Body",      fontSize=11, textColor=DARK,  spaceAfter=5)
-    s_body_muted = ps("BodyMuted", fontSize=10, textColor=MUTED, spaceAfter=4)
+    s_total_lbl = ps("TLbl2", fontSize=9,  textColor=MUTED, fontName="Helvetica-Bold", alignment=TA_RIGHT, letterSpacing=2)
+    s_total_val = ps("TVl2",  fontSize=30, textColor=GOLD,  fontName="Helvetica-Bold", alignment=TA_RIGHT)
 
-    s_th   = ps("TH",  fontSize=10, fontName="Helvetica-Bold", textColor=WHITE)
-    s_th_c = ps("THC", fontSize=10, fontName="Helvetica-Bold", textColor=WHITE, alignment=TA_CENTER)
-    s_th_r = ps("THR", fontSize=10, fontName="Helvetica-Bold", textColor=WHITE, alignment=TA_RIGHT)
+    s_note_lbl  = ps("NLbl", fontSize=7,  textColor=GOLD,  fontName="Helvetica-Bold", letterSpacing=2, spaceAfter=5)
+    s_note_body = ps("NB",   fontSize=9,  textColor=colors.HexColor("#666666"), leading=14)
 
-    s_td   = ps("TD",  fontSize=12, textColor=DARK)
-    s_td_c = ps("TDC", fontSize=12, textColor=DARK, alignment=TA_CENTER)
-    s_td_r = ps("TDR", fontSize=12, textColor=DARK, alignment=TA_RIGHT)
+    s_foot      = ps("Ft",  fontSize=8, textColor=MUTED, alignment=TA_CENTER)
+    s_foot_i    = ps("FtI", fontSize=8, textColor=MUTED, alignment=TA_CENTER,
+                     spaceBefore=4, fontName="Helvetica-Oblique")
 
-    s_total_lbl = ps("TotalLbl", fontSize=14, textColor=DARK, fontName="Helvetica-Bold", alignment=TA_RIGHT)
-    s_total_val = ps("TotalVal", fontSize=28, textColor=GOLD, fontName="Helvetica-Bold", alignment=TA_RIGHT)
-
-    s_footer   = ps("Footer",  fontSize=9, textColor=MUTED, alignment=TA_CENTER)
-    s_footer_i = ps("FooterI", fontSize=9, textColor=MUTED, alignment=TA_CENTER, spaceBefore=6)
-
-    invoice_num = f"BSL-{trip['id']:04d}"
-    generated   = datetime.now().strftime("%B %d, %Y")
-    dest_label  = AIRPORT_LABELS.get(trip["destination"], trip["destination"])
+    # Computed values
+    invoice_num   = f"BSL-{trip['id']:04d}"
+    issued_date   = datetime.now().strftime("%B %d, %Y")
+    dest_label    = AIRPORT_LABELS.get(trip["destination"], trip["destination"])
+    price_str     = f"${trip['price']:,}"
+    try:
+        trip_date = datetime.strptime(trip["date"], "%Y-%m-%d").strftime("%B %d, %Y")
+    except Exception:
+        trip_date = trip["date"] or "—"
 
     story = []
 
+    # ── 1. HEADER ─────────────────────────────────────────────────────────────
     hdr = Table([
         [Paragraph("Blue Star Limo", s_company),
-         Paragraph("INVOICE", s_inv_label)],
+         Paragraph("INVOICE", s_inv_word)],
         [Paragraph("Connecticut's Premier Luxury Transportation", s_tagline),
-         Paragraph(f'<font color="#888888">Invoice # </font><b>{invoice_num}</b>', s_meta_r)],
-        [Paragraph("limobluestar1@gmail.com · Available 24/7", s_tagline),
-         Paragraph(f'<font color="#888888">Date </font>{generated}', s_meta_r_sm)],
-    ], colWidths=[4 * inch, 3 * inch])
+         Paragraph(invoice_num, s_inv_num)],
+        [Paragraph("limobluestar1@gmail.com  ·  Available 24/7", s_contact),
+         Paragraph(f"Issued: {issued_date}", s_inv_date)],
+    ], colWidths=[4.4 * inch, 2.8 * inch])
 
     hdr.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), DARK2),
         ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 22),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 22),
+        ("TOPPADDING",    (0, 0), (-1, 0),  26),
+        ("TOPPADDING",    (0, 1), (-1, 1),  5),
+        ("TOPPADDING",    (0, 2), (-1, 2),  4),
+        ("BOTTOMPADDING", (0, 0), (-1, 1),  2),
+        ("BOTTOMPADDING", (0, 2), (-1, 2),  26),
     ]))
 
     story.append(hdr)
-    story.append(Spacer(1, 20))
-    story.append(HRFlowable(width="100%", thickness=3, color=GOLD, spaceAfter=25))
+    story.append(HRFlowable(width="100%", thickness=4, color=GOLD,
+                             spaceBefore=0, spaceAfter=28))
 
-    story.append(Paragraph("BILL TO", s_section))
-    story.append(Paragraph(
-        f"<font size=14><b>{trip['first_name']} {trip['last_name']}</b></font>",
-        s_body
-    ))
+    # ── 2. BILL TO + TRIP DETAILS (two columns) ───────────────────────────────
+    bill_cells = [
+        Paragraph("BILL TO", s_lbl),
+        Paragraph(f"{trip['first_name']} {trip['last_name']}", s_name),
+    ]
     if trip["phone"]:
-        story.append(Paragraph(trip["phone"], s_body_muted))
-    story.append(Spacer(1, 25))
+        bill_cells.append(Paragraph(trip["phone"], s_info))
+    if trip["email"]:
+        bill_cells.append(Paragraph(trip["email"], s_info))
 
-    story.append(Paragraph("TRIP DETAILS", s_section))
+    trip_cells = [
+        Paragraph("TRIP DETAILS", s_lbl),
+        Paragraph("DESTINATION", s_tlbl),
+        Paragraph(dest_label, s_tval),
+        Paragraph("PICKUP DATE", s_tlbl),
+        Paragraph(trip_date, s_tval),
+        Paragraph("INVOICE NO.", s_tlbl),
+        Paragraph(invoice_num, s_tval),
+    ]
 
+    info_tbl = Table([[bill_cells, trip_cells]],
+                     colWidths=[3.9 * inch, 3.3 * inch])
+    info_tbl.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(info_tbl)
+    story.append(Spacer(1, 22))
+    story.append(HRFlowable(width="100%", thickness=1, color=BORDER, spaceAfter=16))
+
+    # ── 3. SERVICE TABLE ──────────────────────────────────────────────────────
     svc_tbl = Table([
         [Paragraph("DESCRIPTION", s_th),
-         Paragraph("DATE", s_th_c),
+         Paragraph("PICKUP DATE", s_th_c),
          Paragraph("AMOUNT", s_th_r)],
-        [Paragraph(f"Airport Transfer — {dest_label}", s_td),
-         Paragraph(trip["date"], s_td_c),
-         Paragraph(f"{trip['price']}", s_td_r)],
-    ], colWidths=[3.5 * inch, 1.5 * inch, 2 * inch])
+        [[Paragraph(f"Airport Transfer — {dest_label}", s_td),
+          Paragraph(f"Booking ref: {trip['invoice_id']}", s_td_s)],
+         Paragraph(trip_date, s_td_c),
+         Paragraph(price_str, s_td_r)],
+    ], colWidths=[3.9 * inch, 1.5 * inch, 1.8 * inch])
 
     svc_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1,  0), DARK),
         ("BACKGROUND",    (0, 1), (-1, -1), CREAM),
-        ("TOPPADDING",    (0, 0), (-1, -1), 16),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 16),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 14),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
         ("LEFTPADDING",   (0, 0), (-1, -1), 14),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 14),
-        ("LINEBELOW",     (0, 0), (-1,  0), 2, GOLD),
+        ("LINEBELOW",     (0, 0), (-1,  0), 3, GOLD),
         ("LINEBELOW",     (0,-1), (-1, -1), 1, BORDER),
     ]))
 
     story.append(svc_tbl)
-    story.append(Spacer(1, 25))
+    story.append(Spacer(1, 4))
 
+    # ── 4. TOTAL ──────────────────────────────────────────────────────────────
     tot_tbl = Table([
         ["",
-         Paragraph("TOTAL DUE", s_total_lbl),
-         Paragraph(f"{trip['price']}", s_total_val)],
-    ], colWidths=[3.5 * inch, 1.5 * inch, 2 * inch])
+         Paragraph("ESTIMATED TOTAL", s_total_lbl),
+         Paragraph(price_str, s_total_val)],
+    ], colWidths=[3.9 * inch, 1.5 * inch, 1.8 * inch])
 
     tot_tbl.setStyle(TableStyle([
         ("LEFTPADDING",   (0, 0), (-1, -1), 14),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 14),
         ("TOPPADDING",    (0, 0), (-1, -1), 14),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ("LINEABOVE",     (1, 0), (-1,  0), 2, GOLD),
+        ("VALIGN",        (0, 0), (-1, -1), "BOTTOM"),
     ]))
 
     story.append(tot_tbl)
-    story.append(Spacer(1, 60))
+    story.append(Spacer(1, 28))
 
-    story.append(HRFlowable(width="100%", thickness=1, color=BORDER, spaceAfter=12))
+    # ── 5. NOTES ──────────────────────────────────────────────────────────────
+    note_tbl = Table([[
+        [Paragraph("PLEASE NOTE", s_note_lbl),
+         Paragraph(
+             "This is an estimated fare. Final charges may vary based on actual distance, "
+             "traffic conditions, tolls, and any additional stops or waiting time. "
+             "Payment is due upon completion of service.",
+             s_note_body,
+         )]
+    ]], colWidths=[W])
+
+    note_tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), NOTE_BG),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 16),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 16),
+        ("TOPPADDING",    (0, 0), (-1, -1), 14),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
+        ("LINEBELOW",     (0, 0), (-1, -1), 2, GOLD),
+    ]))
+
+    story.append(note_tbl)
+    story.append(Spacer(1, 36))
+
+    # ── 6. FOOTER ─────────────────────────────────────────────────────────────
+    story.append(HRFlowable(width="100%", thickness=1, color=BORDER, spaceAfter=10))
     story.append(Paragraph(
-        "Blue Star Limo LLC · Connecticut's Premier Luxury Transportation · limobluestar1@gmail.com · Available 24/7",
-        s_footer
+        "Blue Star Limo LLC  ·  Connecticut's Premier Luxury Transportation  ·  "
+        "limobluestar1@gmail.com  ·  Available 24/7",
+        s_foot
     ))
     story.append(Paragraph(
         "Thank you for choosing Blue Star Limo — we look forward to serving you.",
-        s_footer_i
+        s_foot_i
     ))
 
     doc.build(story)
@@ -578,8 +717,50 @@ def delete_review(review_id):
     return jsonify({"message": "Review deleted.", "id": review_id})
 
 
+# ─── API: Pricing ────────────────────────────────────────────────────────────
+
+@app.route("/api/pricing", methods=["GET"])
+def list_pricing():
+    return jsonify(get_pricing())
+
+
+@app.route("/api/pricing/<destination>", methods=["POST"])
+def update_destination_price(destination):
+    data = request.get_json() or {}
+    try:
+        price = int(data.get("price", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid price."}), 400
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO pricing (destination, price) VALUES (%s, %s) "
+        "ON CONFLICT (destination) DO UPDATE SET price = EXCLUDED.price",
+        (destination.upper(), price)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"destination": destination.upper(), "price": price})
+
+
+@app.route("/api/trips/<int:trip_id>/price", methods=["PATCH"])
+def update_trip_price(trip_id):
+    data = request.get_json() or {}
+    try:
+        price = int(data.get("price", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid price."}), 400
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE trips SET price = %s WHERE id = %s", (price, trip_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"id": trip_id, "price": price})
+
+
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    init_db()
     port = int(os.environ.get("PORT", 5001))
     app.run(host="0.0.0.0", port=port)

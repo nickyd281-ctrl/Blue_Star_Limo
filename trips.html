@@ -342,6 +342,94 @@
     }
     .btn-save-reply:hover { background: #c9a84c; color: #000; }
 
+    /* ── Price edit ── */
+    .btn-edit-price {
+      background: none;
+      border: none;
+      color: #3a5a7a;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 6px;
+      transition: color 0.2s;
+    }
+    .btn-edit-price:hover { color: #c9a84c; }
+    .price-input {
+      width: 72px;
+      padding: 4px 8px;
+      background: #0d1b2a;
+      border: 1px solid #c9a84c;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+    .btn-save-price {
+      background: none;
+      border: 1px solid #166534;
+      color: #4ade80;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-left: 4px;
+    }
+    .btn-save-price:hover { background: #166534; color: #fff; }
+    .btn-cancel-price {
+      background: none;
+      border: 1px solid #4a2222;
+      color: #cc4444;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-left: 4px;
+    }
+    .btn-cancel-price:hover { background: #cc4444; color: #fff; }
+
+    /* ── Pricing cards ── */
+    .pricing-card {
+      background: #112032;
+      border: 1px solid #1e3352;
+      padding: 20px 24px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .pricing-card-label { font-size: 13px; font-weight: 700; color: #fff; }
+    .pricing-card-sub   { font-size: 11px; color: #5ba8d4; margin-top: 3px; }
+    .pricing-card-right { display: flex; align-items: center; gap: 10px; }
+    .pricing-dollar     { color: #c9a84c; font-size: 16px; font-weight: 700; }
+    .pricing-input {
+      width: 90px;
+      padding: 9px 12px;
+      background: #0d1b2a;
+      border: 1px solid #1e3352;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .pricing-input:focus { border-color: #c9a84c; }
+    .pricing-save {
+      padding: 9px 20px;
+      background: #c9a84c;
+      color: #000;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+    }
+    .pricing-save:hover { background: #e0c46c; }
+    .pricing-saved { color: #4ade80; font-size: 11px; letter-spacing: 1px; display: none; }
+
     /* ── Summary bar ── */
     .summary-bar {
       display: flex;
@@ -397,6 +485,7 @@
   <div class="dash-tabs">
     <button class="dash-tab active" onclick="showTab('trips')">Trips</button>
     <button class="dash-tab" onclick="showTab('reviews')">Reviews</button>
+    <button class="dash-tab" onclick="showTab('pricing')">Pricing</button>
   </div>
 
   <!-- ── TRIPS TAB ── -->
@@ -445,6 +534,16 @@
 
   </div><!-- end #tab-trips -->
 
+  <!-- ── PRICING TAB ── -->
+  <div id="tab-pricing" style="display:none;">
+    <div style="max-width:640px;margin:0 auto;">
+      <div class="reviews-admin-header" style="margin-bottom:20px;">
+        <div class="reviews-admin-count">Set base fares per destination. Affects new bookings only.</div>
+      </div>
+      <div id="pricing-cards"><p class="loading-msg">Loading...</p></div>
+    </div>
+  </div>
+
   <!-- ── REVIEWS TAB ── -->
   <div id="tab-reviews" style="display:none;">
     <div class="reviews-admin-header">
@@ -461,16 +560,27 @@
   // ── Auth ────────────────────────────────────────────────────
   function checkLogin() {
     const pw = document.getElementById("password").value;
-    if (pw === "NAD1218#n") {
-      document.getElementById("login").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
-      document.getElementById("login-error").style.display = "none";
-      loadTrips();
-      loadSummary();
-    } else {
-      document.getElementById("login-error").style.display = "block";
-      document.getElementById("password").value = "";
-    }
+    fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pw })
+    })
+      .then(res => {
+        if (res.ok) {
+          document.getElementById("login").style.display = "none";
+          document.getElementById("dashboard").style.display = "block";
+          document.getElementById("login-error").style.display = "none";
+          loadTrips();
+          loadSummary();
+        } else {
+          document.getElementById("login-error").style.display = "block";
+          document.getElementById("password").value = "";
+        }
+      })
+      .catch(() => {
+        document.getElementById("login-error").style.display = "block";
+        document.getElementById("password").value = "";
+      });
   }
 
   document.getElementById("password").addEventListener("keydown", e => {
@@ -503,7 +613,7 @@
   // ── Trips Table ──────────────────────────────────────────────
   function loadTrips() {
     const filter = document.getElementById("filter").value;
-    const url = filter ? `/api/trips/${filter}` : "/api/trips";
+    const url = filter ? `/api/trips?destination=${filter}` : "/api/trips";
 
     document.getElementById("trips").innerHTML = '<p class="loading-msg">Loading...</p>';
 
@@ -546,7 +656,8 @@
     `;
 
     data.forEach(trip => {
-      const price = "$" + (parseInt(trip.price) || 0).toLocaleString();
+      const rawPrice = parseInt(trip.price) || 0;
+      const price = "$" + rawPrice.toLocaleString();
       const email = trip.email || "—";
       const phone = trip.phone || "—";
       html += `
@@ -557,7 +668,10 @@
           <td>${email}</td>
           <td>${trip.destination}</td>
           <td>${trip.date}</td>
-          <td class="price">${price}</td>
+          <td class="price" id="price-cell-${trip.id}">
+            <span id="price-val-${trip.id}">${price}</span>
+            <button class="btn-edit-price" title="Edit price" onclick="editTripPrice(${trip.id}, ${rawPrice})">✎</button>
+          </td>
           <td>
             <a href="/api/invoice/${trip.id}" class="btn-invoice">Invoice PDF</a>
             <button class="btn-delete" onclick="deleteTrip(${trip.id})">Delete</button>
@@ -581,10 +695,85 @@
   function showTab(name) {
     document.getElementById("tab-trips").style.display   = name === "trips"   ? "" : "none";
     document.getElementById("tab-reviews").style.display = name === "reviews" ? "" : "none";
+    document.getElementById("tab-pricing").style.display = name === "pricing" ? "" : "none";
     document.querySelectorAll(".dash-tab").forEach(function(btn, i) {
-      btn.classList.toggle("active", (i === 0 && name === "trips") || (i === 1 && name === "reviews"));
+      btn.classList.toggle("active",
+        (i === 0 && name === "trips") ||
+        (i === 1 && name === "reviews") ||
+        (i === 2 && name === "pricing")
+      );
     });
     if (name === "reviews") loadReviews();
+    if (name === "pricing") loadPricing();
+  }
+
+  // ── Inline Trip Price Editing ────────────────────────────────
+  function editTripPrice(id, current) {
+    document.getElementById("price-cell-" + id).innerHTML = `
+      <input class="price-input" id="price-input-${id}" type="number" value="${current}" min="0">
+      <button class="btn-save-price" onclick="saveTripPrice(${id})">✓</button>
+      <button class="btn-cancel-price" onclick="loadTrips()">✗</button>
+    `;
+    document.getElementById("price-input-" + id).focus();
+  }
+
+  function saveTripPrice(id) {
+    const price = parseInt(document.getElementById("price-input-" + id).value) || 0;
+    fetch("/api/trips/" + id + "/price", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ price })
+    }).then(() => { loadTrips(); loadSummary(); });
+  }
+
+  // ── Destination Pricing ──────────────────────────────────────
+  const PRICING_LABELS = {
+    JFK: "JFK — John F. Kennedy International",
+    LGA: "LGA — LaGuardia Airport",
+    HVN: "HVN — Tweed New Haven Airport"
+  };
+
+  function loadPricing() {
+    fetch("/api/pricing")
+      .then(r => r.json())
+      .then(renderPricing)
+      .catch(() => {
+        document.getElementById("pricing-cards").innerHTML =
+          '<p class="no-trips">Could not load pricing.</p>';
+      });
+  }
+
+  function renderPricing(data) {
+    const dests = ["JFK", "LGA", "HVN"];
+    const html = dests.map(dest => `
+      <div class="pricing-card">
+        <div>
+          <div class="pricing-card-label">${dest}</div>
+          <div class="pricing-card-sub">${PRICING_LABELS[dest]}</div>
+        </div>
+        <div class="pricing-card-right">
+          <span class="pricing-dollar">$</span>
+          <input class="pricing-input" id="p-${dest}" type="number"
+                 value="${data[dest] !== undefined ? data[dest] : ''}" min="0" placeholder="0">
+          <button class="pricing-save" onclick="saveDestPrice('${dest}')">Save</button>
+          <span class="pricing-saved" id="saved-${dest}">Saved ✓</span>
+        </div>
+      </div>
+    `).join("");
+    document.getElementById("pricing-cards").innerHTML = html;
+  }
+
+  function saveDestPrice(dest) {
+    const price = parseInt(document.getElementById("p-" + dest).value) || 0;
+    fetch("/api/pricing/" + dest, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ price })
+    }).then(r => r.json()).then(() => {
+      const el = document.getElementById("saved-" + dest);
+      el.style.display = "inline";
+      setTimeout(() => { el.style.display = "none"; }, 2000);
+    });
   }
 
   // ── Reviews ──────────────────────────────────────────────────
