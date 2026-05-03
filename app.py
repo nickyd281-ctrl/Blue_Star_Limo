@@ -8,7 +8,8 @@ import io
 import traceback
 from datetime import datetime
 
-load_dotenv()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
@@ -23,8 +24,6 @@ from reportlab.platypus import (
 
 app = Flask(__name__)
 CORS(app)
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 PRICING = {"JFK": 250, "LGA": 290, "HVN": 100}
 
